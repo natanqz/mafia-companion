@@ -17,12 +17,9 @@ WHISTLE_SOUND = "whistle.mp3"
 def inject_styles():
     st.markdown("""
     <style>
-    /* Скролл только на уровне страницы */
     html, body, [data-testid="stAppViewContainer"] {
         overflow-x: auto !important;
     }
-
-    /* Колонки не стекаются, без скролла на каждой строке */
     [data-testid="stHorizontalBlock"] {
         flex-wrap: nowrap !important;
         flex-direction: row !important;
@@ -35,8 +32,6 @@ def inject_styles():
         width: auto !important;
         overflow: visible !important;
     }
-
-    /* Фиксированный размер кнопок */
     div.stButton > button {
         height: 38px !important;
         min-height: 38px !important;
@@ -48,6 +43,21 @@ def inject_styles():
         padding: 2px 4px !important;
         white-space: nowrap !important;
         overflow: hidden !important;
+    }
+
+    /* Классы размеров кнопок */
+    .big-btn button {
+        height: 70px !important;
+        min-height: 70px !important;
+        max-height: 70px !important;
+        font-size: 24px !important;
+    }
+    .small-btn button {
+        height: 30px !important;
+        min-height: 30px !important;
+        max-height: 30px !important;
+        font-size: 12px !important;
+        padding: 0 4px !important;
     }
 
     .big-timer {
@@ -72,7 +82,6 @@ def inject_styles():
     .fs-civil-for-don { background: #cc0000; color: #fff; }
     </style>
     """, unsafe_allow_html=True)
-
 
 
 def inject_gold_buttons(texts=None):

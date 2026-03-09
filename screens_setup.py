@@ -14,26 +14,32 @@ import streamlit.components.v1 as components
 def screen_main_menu():
     st.markdown(
         '<div style="text-align:center;padding:40px 0 10px;">'
-        '<p style="font-size:120px;margin:0;">🎭</p>'
-        '<p style="font-size:28px;font-weight:bold;color:#fff;margin:0;">'
-        'Мафия: Компаньон Ведущего</p></div>',
+        '<p style="font-size:100px;margin:0;">🎭</p>'
+        '<p style="font-size:28px;font-weight:bold;color:#fff;">Mafia Companion</p></div>',
         unsafe_allow_html=True
     )
-    st.markdown("---")
-    st.markdown('<style>.big-new-game button {height:80px !important;font-size:24px !important;}</style>', unsafe_allow_html=True)
-    with st.container():
-        st.markdown('<div class="big-new-game">', unsafe_allow_html=True)
-        if st.button("🕹️ Новая игра", use_container_width=True, key="new_game"):
-            go("select_mode"); st.rerun()
-        st.markdown('</div>', unsafe_allow_html=True)
-    st.markdown("")
+
+    st.markdown('<div class="big-btn">', unsafe_allow_html=True)
+    if st.button("🕹️ Новая игра", use_container_width=True, key="main_new"):
+        go("select_mode")
+        st.rerun()
+    st.markdown('</div>', unsafe_allow_html=True)
+
+    st.markdown('<div class="small-btn">', unsafe_allow_html=True)
     c1, c2, c3 = st.columns(3)
     with c1:
-        if st.button("📋 Игроки", use_container_width=True): go("players_list"); st.rerun()
+        if st.button("👥 Игроки", use_container_width=True, key="main_players"):
+            go("manage_players")
+            st.rerun()
     with c2:
-        if st.button("📜 Архив", use_container_width=True): go("archive"); st.rerun()
+        if st.button("📦 Архив", use_container_width=True, key="main_archive"):
+            go("archive")
+            st.rerun()
     with c3:
-        if st.button("💾 Экспорт", use_container_width=True): go("export_import"); st.rerun()
+        if st.button("📤 Экспорт", use_container_width=True, key="main_export"):
+            go("export")
+            st.rerun()
+    st.markdown('</div>', unsafe_allow_html=True)
 
 
 def screen_select_mode():
