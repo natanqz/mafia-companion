@@ -420,16 +420,7 @@ def screen_select_players():
     }}
     </script>
     """, height=720)
-
     # === Скрытые ST-кнопки ПОСЛЕ iframe ===
-    st.markdown("""
-    <style>
-    div[data-testid="stBottom"] ~ div,
-    div.sp-hidden { display: none !important; }
-    </style>
-    <div class="sp-hidden">
-    """, unsafe_allow_html=True)
-
     for idx, p in enumerate(sorted_players):
         if st.button(f"sp_t_{idx}", key=f"sel_p_{idx}"):
             pid = p['id']
@@ -453,7 +444,6 @@ def screen_select_players():
         st.rerun()
 
     if st.button("sp_Добавить", key="sp_add"):
-        # Читаем из query params
         params = st.query_params
         qa = params.get("qa_add", "")
         if "|||" in qa:
@@ -466,7 +456,35 @@ def screen_select_players():
                 st.query_params.clear()
                 st.rerun()
 
-    st.markdown("</div>", unsafe_allow_html=True)
+    # Прячем все sp_ кнопки и скроллим вверх
+    components.html("""
+    <script>
+    (function() {
+        function hideSpButtons() {
+            const buttons = window.parent.document.querySelectorAll('button');
+            buttons.forEach(b => {
+                const text = b.textContent || '';
+                if (text.startsWith('sp_')) {
+                    const wrapper = b.closest('div[data-testid="stButton"]');
+                    if (wrapper) {
+                        wrapper.style.cssText = 'height:0!important;min-height:0!important;overflow:hidden!important;margin:0!important;padding:0!important;opacity:0!important;position:absolute!important;pointer-events:none!important;';
+                    }
+                }
+            });
+            // Скроллим вверх
+            const main = window.parent.document.querySelector('section.main');
+            if (main) main.scrollTop = 0;
+            const block = window.parent.document.querySelector('[data-testid="stMainBlockContainer"]');
+            if (block) block.scrollTop = 0;
+            window.parent.scrollTo(0, 0);
+        }
+        setTimeout(hideSpButtons, 50);
+        setTimeout(hideSpButtons, 200);
+        setTimeout(hideSpButtons, 500);
+        setTimeout(hideSpButtons, 1000);
+    })();
+    </script>
+    """, height=0)
 
 
 
