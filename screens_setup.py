@@ -139,42 +139,6 @@ def screen_main_menu():
     </script>
     """, height=420)
 
-    # После components.html(...) добавляем:
-
-    # Показываем обратно элементы формы
-    st.markdown("""
-    <style>
-    .qa-visible div[data-testid="stButton"],
-    .qa-visible div[data-testid="stTextInput"] {
-        height: auto !important;
-        min-height: auto !important;
-        overflow: visible !important;
-        margin: auto !important;
-        padding: auto !important;
-        opacity: 1 !important;
-    }
-    </style>
-    <div class="qa-visible">
-    """, unsafe_allow_html=True)
-
-    st.markdown("**➕ Быстрое добавление**")
-    c1, c2, c3 = st.columns([2, 2, 1])
-    with c1:
-        rn = st.text_input("Имя", key="qa_name", label_visibility="collapsed", placeholder="Имя")
-    with c2:
-        nn = st.text_input("Ник", key="qa_nick", label_visibility="collapsed", placeholder="Псевдоним")
-    with c3:
-        if st.button("➕", key="qa_add", use_container_width=True):
-            if rn and nn:
-                pid = str(uuid.uuid4())
-                db['players'].append({"id": pid, "real_name": rn.strip(), "nickname": nn.strip(), "history": []})
-                save_db(db)
-                st.session_state.selected_pids.append(pid)
-                st.session_state.qa_name = ""
-                st.session_state.qa_nick = ""
-                st.rerun()
-
-    st.markdown("</div>", unsafe_allow_html=True)
 
 
 def screen_select_mode():
@@ -506,7 +470,6 @@ def screen_select_players():
                 st.session_state.qa_name = ""
                 st.session_state.qa_nick = ""
                 st.rerun()
-
 
 def _finalize_players(db):
     players = []
