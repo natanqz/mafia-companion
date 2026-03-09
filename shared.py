@@ -17,13 +17,33 @@ WHISTLE_SOUND = "whistle.mp3"
 def inject_styles():
     st.markdown("""
     <style>
-    div.stButton > button {
-        height: 40px;
-        font-size: 16px;
-        font-weight: bold;
-        border-radius: 8px;
-        margin: 2px;
+    /* Запрещаем колонкам стекаться в 1 столбец */
+    [data-testid="stHorizontalBlock"] {
+        flex-wrap: nowrap !important;
+        flex-direction: row !important;
+        gap: 4px !important;
+        overflow-x: auto !important;
     }
+    [data-testid="column"] {
+        min-width: 0 !important;
+        flex: 1 1 0% !important;
+        width: auto !important;
+    }
+
+    /* Фиксированный размер кнопок */
+    div.stButton > button {
+        height: 38px !important;
+        min-height: 38px !important;
+        max-height: 38px !important;
+        font-size: 14px !important;
+        font-weight: bold !important;
+        border-radius: 6px !important;
+        margin: 1px !important;
+        padding: 2px 4px !important;
+        white-space: nowrap !important;
+        overflow: hidden !important;
+    }
+
     .big-timer {
         font-size: 96px;
         text-align: center;
@@ -46,7 +66,6 @@ def inject_styles():
     .fs-civil-for-don { background: #cc0000; color: #fff; }
     </style>
     """, unsafe_allow_html=True)
-
 
 
 
