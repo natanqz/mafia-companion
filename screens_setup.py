@@ -656,7 +656,7 @@ def screen_assign_roles():
     table_html = ""
     for p in sorted_p:
         has_key_role = p['role'] in ['Дон', 'Мафия', 'Шериф']
-        show_cancel = is_manual and has_key_role and not all_done
+        show_cancel = is_manual and has_key_role
 
         if p['role'] == 'Мирный':
             bg = "#1a3a1a"
