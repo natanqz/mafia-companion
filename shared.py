@@ -17,16 +17,42 @@ WHISTLE_SOUND = "whistle.mp3"
 def inject_styles():
     st.markdown("""
     <style>
-    /* Дефолтная кнопка */
+    /* Колонки ПЕРЕНОСЯТСЯ а не улетают */
+    [data-testid="stHorizontalBlock"] {
+        flex-wrap: wrap !important;
+        flex-direction: row !important;
+        gap: 2px !important;
+        overflow: visible !important;
+    }
+    [data-testid="column"] {
+        min-width: 80px !important;
+        flex: 1 1 45% !important;
+        max-width: 50% !important;
+        overflow: visible !important;
+    }
+
+    /* Компактная дефолтная кнопка */
     div.stButton > button {
-        height: 38px !important;
-        min-height: 38px !important;
-        font-size: 14px !important;
+        height: 36px !important;
+        min-height: 36px !important;
+        font-size: 13px !important;
         font-weight: bold !important;
-        border-radius: 8px !important;
-        padding: 2px 8px !important;
+        border-radius: 6px !important;
+        margin: 1px 0 !important;
+        padding: 2px 6px !important;
         white-space: nowrap !important;
         overflow: hidden !important;
+        text-overflow: ellipsis !important;
+    }
+
+    /* Уменьшаем вертикальные отступы между элементами */
+    div[data-testid="stVerticalBlock"] > div {
+        padding-top: 0 !important;
+        padding-bottom: 0 !important;
+    }
+    div.stButton {
+        margin-top: 2px !important;
+        margin-bottom: 2px !important;
     }
 
     .big-timer {
@@ -51,7 +77,6 @@ def inject_styles():
     .fs-civil-for-don { background: #cc0000; color: #fff; }
     </style>
     """, unsafe_allow_html=True)
-
 
 def inject_gold_buttons(texts=None):
     if texts is None:

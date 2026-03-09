@@ -13,9 +13,9 @@ import streamlit.components.v1 as components
 
 def screen_main_menu():
     st.markdown(
-        '<div style="text-align:center;padding:40px 0 10px;">'
-        '<p style="font-size:100px;margin:0;">🎭</p>'
-        '<p style="font-size:28px;font-weight:bold;color:#fff;">Mafia Companion</p></div>',
+        '<div style="text-align:center;padding:20px 0 5px;">'
+        '<p style="font-size:80px;margin:0;">🎭</p>'
+        '<p style="font-size:24px;font-weight:bold;color:#fff;">Mafia Companion</p></div>',
         unsafe_allow_html=True
     )
 
@@ -23,17 +23,20 @@ def screen_main_menu():
         go("select_mode")
         st.rerun()
 
-    if st.button("👥 Игроки", use_container_width=True, key="main_players"):
-        go("manage_players")
-        st.rerun()
+    c1, c2, c3 = st.columns(3)
+    with c1:
+        if st.button("👥 Игроки", use_container_width=True, key="main_players"):
+            go("manage_players")
+            st.rerun()
+    with c2:
+        if st.button("📦 Архив", use_container_width=True, key="main_archive"):
+            go("archive")
+            st.rerun()
+    with c3:
+        if st.button("📤 Экспорт", use_container_width=True, key="main_export"):
+            go("export")
+            st.rerun()
 
-    if st.button("📦 Архив", use_container_width=True, key="main_archive"):
-        go("archive")
-        st.rerun()
-
-    if st.button("📤 Экспорт", use_container_width=True, key="main_export"):
-        go("export")
-        st.rerun()
 
 def screen_select_mode():
     st.markdown(
