@@ -315,21 +315,60 @@ def _crossfade_music(new_filename):
     </script>
     """, height=0)
 
-
 # ---- SOUND EFFECTS ----
-def play_sound_html(fn):
-    fn_full = os.path.join(SOUNDS_FOLDER, fn)
-    if not os.path.exists(fn_full):
+
+def preload_sounds():
+    """Вызвать один раз при старте. Загружает звуки в parent.document."""
+    sounds = {}
+    for fn in [METRONOME_SOUND, WHISTLE_SOUND]:
+        fn_full = os.path.join(SOUNDS_FOLDER, fn)
+        if os.path.exists(fn_full):
+            with open(fn_full, 'rb') as f:
+                sounds[fn] = base64.b64encode(f.read()).decode()
+
+    if not sounds:
         return
-    audio_bytes = open(fn_full, 'rb').read()
-    b64 = base64.b64encode(audio_bytes).decode()
+
+    js_sounds = ""
+    for fn, b64 in sounds.items():
+        safe_name = fn.replace('.', '_')
+        js_sounds += f"""
+            if (!pd.getElementById('snd_{safe_name}')) {{
+                var a = pd.createElement('audio');
+                a.id = 'snd_{safe_name}';
+                a.src = 'data:audio/mp3;base64,{b64}';
+                a.preload = 'auto';
+                a.volume = 1.0;
+                pd.body.appendChild(a);
+            }}
+        """
+
     components.html(f"""
     <script>
     (function() {{
-        var a = new Audio('data:audio/mp3;base64,{b64}');
-        a.volume = 1.0;
-        a.play().catch(function(){{}});
-        a.onended = function() {{ a.remove(); }};
+        var pd = window.parent.document;
+        {js_sounds}
+    }})();
+    </script>
+    """, height=0)
+
+
+def play_sound_html(fn):
+    """Воспроизводит предзагруженный звук — мгновенно, без создания нового audio."""
+    safe_name = fn.replace('.', '_')
+    components.html(f"""
+    <script>
+    (function() {{
+        var pd = window.parent.document;
+        var a = pd.getElementById('snd_{safe_name}');
+        if (a) {{
+            a.currentTime = 0;
+            a.play().catch(function(){{}});
+        }} else {{
+            // Fallback: если не предзагружен
+            var fn_full = 'snd_{safe_name}';
+            console.warn('Sound not preloaded:', fn_full);
+        }}
     }})();
     </script>
     """, height=0)

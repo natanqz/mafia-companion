@@ -324,8 +324,10 @@ def _run_morning_timer(timer_ph):
             </div>
         </div>''', unsafe_allow_html=True)
         if sec <= 10 and sec > 0: play_sound_html(METRONOME_SOUND)
-        if sec == 0: play_sound_html(WHISTLE_SOUND); break
-        time.sleep(1)
+        if sec == 0: play_sound_html(WHISTLE_SOUND)
+        time.sleep(2)
+        break
+
 
 
 def _go_next_day(day):

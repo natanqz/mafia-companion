@@ -1280,6 +1280,7 @@ def _run_n0_live():
             play_sound_html(METRONOME_SOUND)
         if sec == 0:
             play_sound_html(WHISTLE_SOUND)
+            time.sleep(2)  # ← даём свистку отыграть!
             st.session_state.n0_phase = "done"
             st.session_state.n0_timer_start = None
             st.rerun()
@@ -1340,6 +1341,7 @@ def _run_n0_live():
             play_sound_html(METRONOME_SOUND)
         if sec == 0:
             play_sound_html(WHISTLE_SOUND)
+            time.sleep(2)  # ← даём свистку отыграть!
             st.session_state.n0_phase = "done"
             st.session_state.n0_timer_start = None
             st.rerun()
@@ -1399,6 +1401,7 @@ def _run_n0_live():
             play_sound_html(METRONOME_SOUND)
         if sec == 0:
             play_sound_html(WHISTLE_SOUND)
+            time.sleep(2)  # ← даём свистку отыграть!
             st.session_state.n0_phase = "done"
             st.session_state.n0_timer_start = None
             st.rerun()
@@ -1433,8 +1436,10 @@ def _run_n0_timer(timer_ph):
             </div>
         </div>''', unsafe_allow_html=True)
         if sec <= 10 and sec > 0: play_sound_html(METRONOME_SOUND)
-        if sec == 0: play_sound_html(WHISTLE_SOUND); break
-        time.sleep(1)
+        if sec == 0: play_sound_html(WHISTLE_SOUND)
+        time.sleep(2)  # ← даём свистку отыграть!
+        break
+
 
 
 def screen_players_list():

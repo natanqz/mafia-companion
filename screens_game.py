@@ -199,8 +199,10 @@ def _run_live_loop(timer_display, live_zone, all_players, order, speaker_idx):
         _draw_timer_only(timer_display, sec)
         _draw_player_bars(live_zone, all_players, order, speaker_idx)
         if sec <= 10 and sec > 0: play_sound_html(METRONOME_SOUND)
-        if sec == 0: play_sound_html(WHISTLE_SOUND); break
-        time.sleep(1)
+        if sec == 0: play_sound_html(WHISTLE_SOUND)
+        time.sleep(2)
+        break
+
 
 
 def _next_speaker():
@@ -694,8 +696,10 @@ def _run_cat_timer_loop(timer_display, live_zone, players, tied, prev_voters, sp
         html = _build_cat_bars_html(players, tied, prev_voters, speaker_idx)
         live_zone.markdown(html, unsafe_allow_html=True)
         if sec <= 10 and sec > 0: play_sound_html(METRONOME_SOUND)
-        if sec == 0: play_sound_html(WHISTLE_SOUND); break
-        time.sleep(1)
+        if sec == 0: play_sound_html(WHISTLE_SOUND)
+        time.sleep(2)
+        break
+
 
 
 def _reset_cat():
@@ -731,8 +735,10 @@ def _run_lw_timer(timer_ph):
                 </div>
             </div>''', unsafe_allow_html=True)
         if sec <= 10 and sec > 0: play_sound_html(METRONOME_SOUND)
-        if sec == 0: play_sound_html(WHISTLE_SOUND); break
-        time.sleep(1)
+        if sec == 0: play_sound_html(WHISTLE_SOUND)
+        time.sleep(2)
+        break
+
 
 def _finish_last_word(day):
     st.session_state.lw_timer_start = None

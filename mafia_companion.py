@@ -1,5 +1,5 @@
 import streamlit as st
-from shared import init_state, inject_styles, inject_gold_buttons
+from shared import init_state, inject_styles, inject_gold_buttons, preload_sounds
 from screens_setup import (
     screen_main_menu,
     screen_select_mode,
@@ -26,6 +26,7 @@ from screens_night import (
 st.set_page_config(page_title="🎭 Мафия Компаньон", layout="wide")
 init_state()
 inject_styles()
+preload_sounds()  # ← добавить
 
 SCREENS = {
     "main_menu": screen_main_menu,
