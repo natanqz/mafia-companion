@@ -19,24 +19,72 @@ def screen_main_menu():
         unsafe_allow_html=True
     )
 
-    st.markdown('<div class="square-btn">', unsafe_allow_html=True)
-    if st.button("🕹️\nНовая\nигра", key="main_new"):
-        go("select_mode")
-        st.rerun()
-    st.markdown('</div>', unsafe_allow_html=True)
+    # Квадратная кнопка через HTML + скрытая Streamlit-кнопка
+    st.markdown("""
+    <style>
+    .sq-new-game {
+        display: flex;
+        justify-content: center;
+        padding: 10px 0;
+    }
+    .sq-new-game-inner {
+        width: 140px;
+        height: 140px;
+        background: #262730;
+        border: 1px solid #555;
+        border-radius: 16px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        font-size: 18px;
+        font-weight: bold;
+        color: #fff;
+    }
+    .sq-new-game-inner:hover {
+        background: #3a3a4a;
+        border-color: #ff4b4b;
+    }
+    .sq-new-game-inner .icon {
+        font-size: 48px;
+        margin-bottom: 8px;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
+    col_center = st.columns([1, 2, 1])[1]
+    with col_center:
+        if st.button("🕹️ Новая игра", key="main_new", use_container_width=True):
+            go("select_mode")
+            st.rerun()
+
+    # Стиль именно для этой кнопки через key
+    st.markdown("""
+    <style>
+    [data-testid="stMainBlockContainer"] div.stButton:first-of-type > button {
+        height: 140px !important;
+        min-height: 140px !important;
+        max-height: 140px !important;
+        font-size: 24px !important;
+        border-radius: 16px !important;
+        padding: 8px !important;
+    }
+    </style>
+    """, unsafe_allow_html=True)
 
     st.markdown('<div class="small-btn">', unsafe_allow_html=True)
     c1, c2, c3 = st.columns(3)
     with c1:
-        if st.button("👥 Игроки",  key="main_players"):
+        if st.button("👥 Игроки", key="main_players"):
             go("manage_players")
             st.rerun()
     with c2:
-        if st.button("📦 Архив", key="main_archive"):
+        if st.button("📦 Архив", use_container_width=True, key="main_archive"):
             go("archive")
             st.rerun()
     with c3:
-        if st.button("📤 Экспорт",  key="main_export"):
+        if st.button("📤 Экспорт", use_container_width=True, key="main_export"):
             go("export")
             st.rerun()
     st.markdown('</div>', unsafe_allow_html=True)
