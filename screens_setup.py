@@ -615,38 +615,11 @@ def _finalize_players(db):
 
 
 def screen_assign_roles():
+    import streamlit.components.v1 as components
     game = st.session_state.game
     players = game['players']
     n = len(players)
     roles = calculate_roles(n)
-
-    st.markdown(
-        '<div style="text-align:center;padding:20px 0 5px;">'
-        '<p style="font-size:80px;margin:0;">📜</p>'
-        '<p style="font-size:22px;font-weight:bold;color:#fff;">Раздача ролей</p></div>',
-        unsafe_allow_html=True
-    )
-    music_player()
-    st.markdown("---")
-
-    col1, col2 = st.columns(2)
-    with col1:
-        if st.button("🎲 Случайные", use_container_width=True, key="auto_mode"):
-            _do_auto_assign(players, roles)
-            st.session_state.role_assignment_mode = "auto"
-            st.rerun()
-    with col2:
-        if st.button("✋ Ручной", use_container_width=True, key="manual_mode"):
-            st.session_state.role_assignment_mode = "manual"
-            st.session_state.manual_assigned = {}
-            for p in players: p['role'] = ""
-            st.rerun()
-
-    st.markdown("---")
-
-    if st.session_state.get('role_assignment_mode') == "manual":
-        _render_manual_roles_by_role(players, roles, n)
-        st.markdown("---")
 
     # Проверка — все ли роли назначены
     assigned_roles = Counter([p['role'] for p in players if p['role']])
@@ -655,73 +628,213 @@ def screen_assign_roles():
         expected[role] = cnt
     all_done = assigned_roles == expected
 
-    # === ТАБЛИЦА В ОДНУ КОЛОНКУ ===
     sorted_p = sorted(players, key=lambda p: p['number'])
 
+    # === Генерируем HTML таблицы игроков ===
+    table_html = ""
     for p in sorted_p:
         if p['role'] == 'Мирный':
-            # Мирный — влево
-            st.markdown(
-                f'<div style="background:#1a3a1a;padding:8px 14px;margin:3px 0;'
-                f'border-radius:6px;color:white;font-size:15px;text-align:left;">'
-                f'❤️ #{p["number"]} {p["nickname"]}</div>',
-                unsafe_allow_html=True)
+            bg = "#1a3a1a"
+            text = f'❤️ #{p["number"]} {p["nickname"]}'
+            align = "left"
         elif p['role'] in ['Дон', 'Мафия', 'Шериф']:
-            # Ролевой — вправо
             emoji = role_emoji(p['role'])
             bg = "#2a1a1a" if p['role'] in ['Дон', 'Мафия'] else "#1a2a3d"
-            if not all_done:
-                st.markdown(
-                    f'<div style="background:{bg};padding:8px 14px;margin:3px 0;'
-                    f'border-radius:6px;color:white;font-size:15px;text-align:right;">'
-                    f'#{p["number"]} {p["nickname"]} — {emoji} {p["role"]}</div>',
-                    unsafe_allow_html=True)
-                if st.button(f"✖ Снять роль #{p['number']}", key=f"cancel_{p['number']}", use_container_width=True):
-                    p['role'] = ""
+            text = f'#{p["number"]} {p["nickname"]} — {emoji} {p["role"]}'
+            align = "right"
+        else:
+            bg = "#1a1a3d"
+            text = f'#{p["number"]} {p["nickname"]} — ❓'
+            align = "center"
+        table_html += (
+            f'<div style="background:{bg};padding:8px 14px;margin:3px 0;'
+            f'border-radius:6px;color:white;font-size:15px;text-align:{align};">'
+            f'{text}</div>\n'
+        )
+
+    # === Логика кнопок ===
+    night_style = "background:linear-gradient(135deg,#27ae60,#219a52);color:#fff;border:none;" if all_done else "background:#262730;color:#666;border:1px solid #444;opacity:0.35;"
+    night_disabled = "" if all_done else "disabled"
+    night_onclick = "clickAR('ar_Ночь0')" if all_done else ""
+
+    # Ручной режим — сетка выбора ролей
+    manual_html = ""
+    if st.session_state.get('role_assignment_mode') == "manual":
+        for role_name in ["Дон", "Шериф", "Мафия"]:
+            role_count = roles.get(role_name, 0)
+            if role_count == 0:
+                continue
+            already = [p for p in players if p['role'] == role_name]
+            remaining = role_count - len(already)
+            if remaining <= 0:
+                names = ", ".join([f"#{p['number']}" for p in sorted(already, key=lambda x: x['number'])])
+                manual_html += f'<div style="color:#8bc78b;font-size:14px;padding:4px 0;font-weight:bold;">{role_emoji(role_name)} {role_name}: {names} ✅</div>'
+                continue
+            manual_html += f'<div style="color:#ccc;font-size:14px;padding:6px 0 2px;font-weight:bold;">{role_emoji(role_name)} {role_name} — выберите {remaining}:</div>'
+            manual_html += '<div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:4px;">'
+            for p in sorted_p:
+                has_role = p['role'] != ""
+                if has_role:
+                    lbl = f"{role_emoji(p['role'])}#{p['number']}"
+                    manual_html += f'<button style="flex:0 0 18%;height:36px;border-radius:6px;background:#333;border:1px solid #555;color:#666;font-size:12px;font-weight:bold;cursor:default;" disabled>{lbl}</button>'
+                else:
+                    lbl = f"#{p['number']}"
+                    manual_html += f'<button style="flex:0 0 18%;height:36px;border-radius:6px;background:#262730;border:1px solid #666;color:#ccc;font-size:12px;font-weight:bold;cursor:pointer;" onclick="clickAR(\'ar_m_{role_name}_{p["number"]}\')">{lbl}</button>'
+            manual_html += '</div>'
+
+    # Кнопки снятия роли (если не все назначены)
+    cancel_html = ""
+    if not all_done:
+        for p in sorted_p:
+            if p['role'] in ['Дон', 'Мафия', 'Шериф']:
+                cancel_html += f'<button style="width:100%;height:32px;border-radius:6px;background:#3a1a1a;border:1px solid #662222;color:#ff8888;font-size:12px;font-weight:bold;cursor:pointer;margin:2px 0;" onclick="clickAR(\'ar_cancel_{p["number"]}\')">✖ Снять роль #{p["number"]}</button>'
+
+    components.html(f"""
+    <style>
+        * {{ margin: 0; padding: 0; box-sizing: border-box; }}
+        body {{ background: transparent; font-family: -apple-system, sans-serif; }}
+        .wrap {{ display: flex; flex-direction: column; padding: 10px 8px; gap: 8px; }}
+        .header {{ text-align: center; padding: 4px 0; }}
+        .header .icon {{ font-size: 56px; }}
+        .header .title {{ font-size: 20px; font-weight: bold; color: #fff; margin: 2px 0; }}
+        .row {{ display: flex; gap: 6px; }}
+        .btn {{
+            flex: 1; height: 44px; border-radius: 10px;
+            font-size: 13px; font-weight: bold; cursor: pointer;
+            transition: transform 0.12s; padding: 0 6px;
+        }}
+        .btn:active {{ transform: scale(0.95); }}
+        .btn:hover {{ filter: brightness(1.15); }}
+        .btn-gray {{ background: #262730; color: #ccc; border: 1px solid #555; }}
+        .btn-blue {{ background: linear-gradient(135deg, #3498db, #2980b9); color: #fff; border: none; }}
+        .btn-orange {{ background: linear-gradient(135deg, #e67e22, #d35400); color: #fff; border: none; }}
+        .btn-red {{ background: #3a1a1a; color: #ff8888; border: 1px solid #662222; }}
+        .divider {{ border-top: 1px solid #333; margin: 4px 0; }}
+        .table {{ display: flex; flex-direction: column; gap: 0; }}
+        .status {{ text-align: center; padding: 8px; font-size: 16px; font-weight: bold; }}
+        .status.ok {{ color: #4CAF50; }}
+        .manual-section {{ padding: 4px 0; }}
+    </style>
+    <div class="wrap">
+        <div class="header">
+            <div class="icon">📜</div>
+            <div class="title">Раздача ролей</div>
+        </div>
+        <div class="row">
+            <button class="btn btn-blue" onclick="clickAR('ar_Случайно')">🎲 Случайно</button>
+            <button class="btn btn-orange" onclick="clickAR('ar_Вручную')">✋ Вручную</button>
+            <button class="btn btn-red" onclick="clickAR('ar_Сбросить')">🗑️ Сбросить</button>
+        </div>
+        <div class="divider"></div>
+        <div class="manual-section">{manual_html}</div>
+        {cancel_html}
+        <div class="divider"></div>
+        <div class="table">{table_html}</div>
+        {"<div class='status ok'>✅ Все роли назначены!</div>" if all_done else ""}
+        <div class="divider"></div>
+        <div class="row">
+            <button class="btn btn-gray" onclick="clickAR('ar_Назад')">⬅️ Назад</button>
+            <button class="btn btn-gray" onclick="clickAR('ar_Перемешать')">🔀 Номерки</button>
+            <button class="btn" style="{night_style}" onclick="{night_onclick}" {night_disabled}>🌙 Ночь 0</button>
+        </div>
+    </div>
+    <script>
+    function clickAR(text) {{
+        const buttons = window.parent.document.querySelectorAll('button');
+        for (let b of buttons) {{
+            if (b.textContent.includes(text)) {{
+                b.style.opacity = '1';
+                b.style.pointerEvents = 'auto';
+                b.click();
+                return;
+            }}
+        }}
+    }}
+    </script>
+    """, height=max(600, 280 + n * 38 + (len(manual_html) > 0) * 200))
+
+    # === Скрытые ST-кнопки ===
+    if st.button("ar_Случайно", key="ar_auto"):
+        _do_auto_assign(players, roles)
+        st.session_state.role_assignment_mode = "auto"
+        st.rerun()
+
+    if st.button("ar_Вручную", key="ar_manual"):
+        st.session_state.role_assignment_mode = "manual"
+        st.session_state.manual_assigned = {}
+        for p in players: p['role'] = ""
+        st.rerun()
+
+    if st.button("ar_Сбросить", key="ar_reset"):
+        for p in players: p['role'] = ""
+        st.session_state.manual_assigned = {}
+        st.session_state.role_assignment_mode = None
+        st.rerun()
+
+    if st.button("ar_Назад", key="ar_back"):
+        go("select_players"); st.rerun()
+
+    if st.button("ar_Перемешать", key="ar_shuffle"):
+        numbers = list(range(1, n + 1))
+        random.shuffle(numbers)
+        for i, p in enumerate(sorted(players, key=lambda x: x['number'])):
+            p['number'] = numbers[i]
+        st.rerun()
+
+    if st.button("ar_Ночь0", key="ar_night0"):
+        if all_done:
+            go("night_zero"); st.rerun()
+
+    # Кнопки ручного назначения
+    for role_name in ["Дон", "Шериф", "Мафия"]:
+        for p in sorted_p:
+            if st.button(f"ar_m_{role_name}_{p['number']}", key=f"ar_m_{role_name}_{p['number']}"):
+                if not p['role']:
+                    p['role'] = role_name
                     ma = st.session_state.get('manual_assigned', {})
-                    for k in [k for k, v in ma.items() if v == p['number']]: del ma[k]
+                    ma[f"{role_name}_{p['number']}"] = p['number']
                     st.session_state.manual_assigned = ma
                     _recalc_peaceful(players, roles)
                     st.rerun()
-            else:
-                st.markdown(
-                    f'<div style="background:{bg};padding:8px 14px;margin:3px 0;'
-                    f'border-radius:6px;color:white;font-size:15px;text-align:right;">'
-                    f'#{p["number"]} {p["nickname"]} — {emoji} {p["role"]}</div>',
-                    unsafe_allow_html=True)
-        else:
-            # Не назначен — по центру
-            st.markdown(
-                f'<div style="background:#1a1a3d;padding:8px 14px;margin:3px 0;'
-                f'border-radius:6px;color:#888;font-size:15px;text-align:center;">'
-                f'#{p["number"]} {p["nickname"]} — ❓</div>',
-                unsafe_allow_html=True)
 
-    st.markdown("---")
-    col_a, col_b = st.columns(2)
-    with col_a:
-        if st.button("🔀 Перемешать номерки", use_container_width=True, key="reshuffle"):
-            numbers = list(range(1, n + 1))
-            random.shuffle(numbers)
-            for i, p in enumerate(sorted(players, key=lambda x: x['number'])):
-                p['number'] = numbers[i]
-            st.rerun()
-    with col_b:
-        if st.button("🗑️ Сбросить роли", use_container_width=True, key="reset_roles"):
-            for p in players: p['role'] = ""
-            st.session_state.manual_assigned = {}
-            st.session_state.role_assignment_mode = None
+    # Кнопки снятия роли
+    for p in sorted_p:
+        if st.button(f"ar_cancel_{p['number']}", key=f"ar_cancel_{p['number']}"):
+            p['role'] = ""
+            ma = st.session_state.get('manual_assigned', {})
+            for k in [k for k, v in ma.items() if v == p['number']]: del ma[k]
+            st.session_state.manual_assigned = ma
+            _recalc_peaceful(players, roles)
             st.rerun()
 
-    if all_done:
-        st.markdown("---")
-        st.success("✅ Все роли назначены!")
-        if st.button("🌙 Ночь 0 — Знакомство", use_container_width=True, key="to_night0"):
-            go("night_zero"); st.rerun()
+    # Прячем ar_ кнопки и скроллим вверх
+    components.html("""
+    <script>
+    (function() {
+        function hideArButtons() {
+            const buttons = window.parent.document.querySelectorAll('button');
+            buttons.forEach(b => {
+                const text = b.textContent || '';
+                if (text.startsWith('ar_')) {
+                    const wrapper = b.closest('div[data-testid="stButton"]');
+                    if (wrapper) {
+                        wrapper.style.cssText = 'height:0!important;min-height:0!important;overflow:hidden!important;margin:0!important;padding:0!important;opacity:0!important;position:absolute!important;pointer-events:none!important;';
+                    }
+                }
+            });
+            const main = window.parent.document.querySelector('section.main');
+            if (main) main.scrollTop = 0;
+            window.parent.scrollTo(0, 0);
+        }
+        setTimeout(hideArButtons, 50);
+        setTimeout(hideArButtons, 200);
+        setTimeout(hideArButtons, 500);
+        setTimeout(hideArButtons, 1000);
+    })();
+    </script>
+    """, height=0)
 
-    st.markdown("---")
-    if st.button("⬅️ Назад", use_container_width=True, key="roles_back"):
-        go("select_players"); st.rerun()
+
 
 def _do_auto_assign(players, roles):
     role_list = []
