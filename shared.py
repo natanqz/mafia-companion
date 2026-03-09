@@ -216,15 +216,83 @@ def stop_background_music():
 
 # ---- SOUND ----
 def play_sound_html(fn):
+    """Воспроизводит короткий звук через JS — не мешает фоновой музыке"""
     fn_full = os.path.join(SOUNDS_FOLDER, fn)
     if not os.path.exists(fn_full):
         return
     audio_bytes = open(fn_full, 'rb').read()
     b64 = base64.b64encode(audio_bytes).decode()
-    st.markdown(
-        f'<audio autoplay><source src="data:audio/mp3;base64,{b64}" type="audio/mp3"></audio>',
-        unsafe_allow_html=True
-    )
+    components.html(f"""
+    <script>
+    (function() {{
+        var a = new Audio('data:audio/mp3;base64,{b64}');
+        a.volume = 1.0;
+        a.play().catch(function(){{}});
+        // Самоуничтожение после воспроизведения
+        a.onended = function() {{ a.remove(); }};
+    }})();
+    </script>
+    """, height=0)
+
+def ensure_bg_music(filename, volume=0.3):
+    """Запускает фоновую музыку если ещё не играет этот трек"""
+    fn_full = os.path.join(MUSIC_FOLDER, filename)
+    if not os.path.exists(fn_full):
+        return
+    audio_bytes = open(fn_full, 'rb').read()
+    b64 = base64.b64encode(audio_bytes).decode()
+    saved_pos = st.session_state.get("music_position", 0.0)
+    components.html(f"""
+    <script>
+    (function() {{
+        var pd = window.parent.document;
+        var audio = pd.getElementById('bg_music');
+        // Если уже играет этот трек — не трогаем
+        if (audio && audio.dataset.file === '{filename}' && !audio.paused) return;
+        // Если другой трек — убираем
+        if (audio) {{ audio.pause(); audio.remove(); }}
+        // Создаём новый
+        audio = pd.createElement('audio');
+        audio.id = 'bg_music';
+        audio.dataset.file = '{filename}';
+        audio.src = 'data:audio/mp3;base64,{b64}';
+        audio.loop = true;
+        audio.volume = {volume};
+        audio.currentTime = {saved_pos};
+        pd.body.appendChild(audio);
+        audio.play().catch(function() {{
+            pd.addEventListener('click', function tryP() {{
+                audio.play().catch(function(){{}});
+                pd.removeEventListener('click', tryP);
+            }}, {{once:true}});
+        }});
+    }})();
+    </script>
+    """, height=0)
+
+
+def pause_bg_music():
+    """Пауза фоновой музыки (сохраняет позицию)"""
+    components.html("""
+    <script>
+    (function() {
+        var a = window.parent.document.getElementById('bg_music');
+        if (a && !a.paused) a.pause();
+    })();
+    </script>
+    """, height=0)
+
+
+def resume_bg_music():
+    """Продолжить фоновую музыку"""
+    components.html("""
+    <script>
+    (function() {
+        var a = window.parent.document.getElementById('bg_music');
+        if (a && a.paused) a.play().catch(function(){});
+    })();
+    </script>
+    """, height=0)
 
 def music_player():
     files = [f for f in os.listdir(MUSIC_FOLDER) if f.endswith(".mp3")]
