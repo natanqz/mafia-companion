@@ -177,75 +177,44 @@ def screen_assign_roles():
         expected[role] = cnt
     all_done = assigned_roles == expected
 
-    # ТАБЛИЦА
+    # === ТАБЛИЦА В ОДНУ КОЛОНКУ ===
     sorted_p = sorted(players, key=lambda p: p['number'])
 
-    if all_done:
-        # 2 столбца: мирные | ролевые
-        col_l, col_r = st.columns(2)
-        with col_l:
-            st.markdown("#### ❤️ Мирные")
-        with col_r:
-            st.markdown("#### 🖤 Ролевые")
-
-        for p in sorted_p:
-            col_l, col_r = st.columns(2)
-            if p['role'] == 'Мирный':
-                with col_l:
-                    st.markdown(
-                        f'<div style="background:#1a3a1a;padding:6px 12px;margin:2px 0;'
-                        f'border-radius:6px;color:white;font-size:14px;">'
-                        f'#{p["number"]} {p["nickname"]} — ❤️</div>',
-                        unsafe_allow_html=True)
-                with col_r:
-                    st.markdown('<div style="height:34px;"></div>', unsafe_allow_html=True)
-            else:
-                emoji = role_emoji(p['role'])
-                bg = "#2a1a1a" if p['role'] in ['Дон', 'Мафия'] else "#1a2a3d"
-                with col_l:
-                    st.markdown('<div style="height:34px;"></div>', unsafe_allow_html=True)
-                with col_r:
-                    st.markdown(
-                        f'<div style="background:{bg};padding:6px 12px;margin:2px 0;'
-                        f'border-radius:6px;color:white;font-size:14px;">'
-                        f'#{p["number"]} {p["nickname"]} — {emoji} {p["role"]}</div>',
-                        unsafe_allow_html=True)
-    else:
-        # 3 столбца
-        col_l, col_c, col_r = st.columns(3)
-        with col_l: st.markdown("#### ❤️ Мирные")
-        with col_c: st.markdown("#### ❓ Не назначены")
-        with col_r: st.markdown("#### 🖤 Ролевые")
-
-        for p in sorted_p:
-            col_l, col_c, col_r = st.columns(3)
-            if p['role'] == 'Мирный':
-                with col_l:
-                    st.markdown(f'<div style="background:#1a3a1a;padding:6px 12px;margin:2px 0;border-radius:6px;color:white;font-size:14px;">#{p["number"]} {p["nickname"]} — ❤️</div>', unsafe_allow_html=True)
-                with col_c: st.markdown('<div style="height:34px;"></div>', unsafe_allow_html=True)
-                with col_r: st.markdown('<div style="height:34px;"></div>', unsafe_allow_html=True)
-            elif p['role'] in ['Дон', 'Мафия', 'Шериф']:
-                emoji = role_emoji(p['role'])
-                bg = "#2a1a1a" if p['role'] in ['Дон', 'Мафия'] else "#1a2a3d"
-                with col_l: st.markdown('<div style="height:34px;"></div>', unsafe_allow_html=True)
-                with col_c: st.markdown('<div style="height:34px;"></div>', unsafe_allow_html=True)
-                with col_r:
-                    card_c, cancel_c = st.columns([4, 1])
-                    with card_c:
-                        st.markdown(f'<div style="background:{bg};padding:6px 12px;margin:2px 0;border-radius:6px;color:white;font-size:14px;">#{p["number"]} {p["nickname"]} — {emoji} {p["role"]}</div>', unsafe_allow_html=True)
-                    with cancel_c:
-                        if st.button("✖", key=f"cancel_{p['number']}"):
-                            p['role'] = ""
-                            ma = st.session_state.get('manual_assigned', {})
-                            for k in [k for k, v in ma.items() if v == p['number']]: del ma[k]
-                            st.session_state.manual_assigned = ma
-                            _recalc_peaceful(players, roles)
-                            st.rerun()
-            else:
-                with col_l: st.markdown('<div style="height:34px;"></div>', unsafe_allow_html=True)
-                with col_c:
-                    st.markdown(f'<div style="background:#1a1a3d;padding:6px 12px;margin:2px 0;border-radius:6px;color:#888;font-size:14px;">#{p["number"]} {p["nickname"]} — ❓</div>', unsafe_allow_html=True)
-                with col_r: st.markdown('<div style="height:34px;"></div>', unsafe_allow_html=True)
+    for p in sorted_p:
+        if p['role'] == 'Мирный':
+            # Мирный — влево
+            st.markdown(
+                f'<div style="background:#1a3a1a;padding:8px 14px;margin:3px 0;'
+                f'border-radius:6px;color:white;font-size:15px;text-align:left;">'
+                f'❤️ #{p["number"]} {p["nickname"]}</div>',
+                unsafe_allow_html=True)
+        elif p['role'] in ['Дон', 'Мафия', 'Шериф']:
+            # Ролевой — вправо
+            emoji = role_emoji(p['role'])
+            bg = "#2a1a1a" if p['role'] in ['Дон', 'Мафия'] else "#1a2a3d"
+            cancel_col1, cancel_col2 = st.columns([6, 1])
+            with cancel_col1:
+                st.markdown(
+                    f'<div style="background:{bg};padding:8px 14px;margin:3px 0;'
+                    f'border-radius:6px;color:white;font-size:15px;text-align:right;">'
+                    f'#{p["number"]} {p["nickname"]} — {emoji} {p["role"]}</div>',
+                    unsafe_allow_html=True)
+            with cancel_col2:
+                if not all_done:
+                    if st.button("✖", key=f"cancel_{p['number']}"):
+                        p['role'] = ""
+                        ma = st.session_state.get('manual_assigned', {})
+                        for k in [k for k, v in ma.items() if v == p['number']]: del ma[k]
+                        st.session_state.manual_assigned = ma
+                        _recalc_peaceful(players, roles)
+                        st.rerun()
+        else:
+            # Не назначен — по центру
+            st.markdown(
+                f'<div style="background:#1a1a3d;padding:8px 14px;margin:3px 0;'
+                f'border-radius:6px;color:#888;font-size:15px;text-align:center;">'
+                f'#{p["number"]} {p["nickname"]} — ❓</div>',
+                unsafe_allow_html=True)
 
     st.markdown("---")
     col_a, col_b = st.columns(2)
@@ -269,11 +238,9 @@ def screen_assign_roles():
         if st.button("🌙 Ночь 0 — Знакомство", use_container_width=True, key="to_night0"):
             go("night_zero"); st.rerun()
 
-
     st.markdown("---")
     if st.button("⬅️ Назад", use_container_width=True, key="roles_back"):
         go("select_players"); st.rerun()
-
 
 def _do_auto_assign(players, roles):
     role_list = []
