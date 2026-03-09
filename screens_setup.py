@@ -643,7 +643,6 @@ def screen_assign_roles():
     n = len(players)
     roles = calculate_roles(n)
 
-    # Проверка — все ли роли назначены
     assigned_roles = Counter([p['role'] for p in players if p['role']])
     expected = Counter()
     for role, cnt in roles.items():
@@ -651,10 +650,14 @@ def screen_assign_roles():
     all_done = assigned_roles == expected
 
     sorted_p = sorted(players, key=lambda p: p['number'])
+    is_manual = st.session_state.get('role_assignment_mode') == "manual"
 
-    # === Генерируем HTML таблицы игроков ===
+    # === Таблица игроков с кнопками снятия роли ===
     table_html = ""
     for p in sorted_p:
+        has_key_role = p['role'] in ['Дон', 'Мафия', 'Шериф']
+        show_cancel = is_manual and has_key_role and not all_done
+
         if p['role'] == 'Мирный':
             bg = "#1a3a1a"
             text = f'❤️ #{p["number"]} {p["nickname"]}'
@@ -668,20 +671,37 @@ def screen_assign_roles():
             bg = "#1a1a3d"
             text = f'#{p["number"]} {p["nickname"]} — ❓'
             align = "center"
-        table_html += (
-            f'<div style="background:{bg};padding:8px 14px;margin:3px 0;'
-            f'border-radius:6px;color:white;font-size:15px;text-align:{align};">'
-            f'{text}</div>\n'
-        )
 
-    # === Логика кнопок ===
+        if show_cancel:
+            table_html += (
+                f'<div style="display:flex;align-items:center;gap:6px;margin:3px 0;">'
+                f'<div style="flex:1;background:{bg};padding:8px 14px;'
+                f'border-radius:6px;color:white;font-size:15px;text-align:{align};">'
+                f'{text}</div>'
+                f'<button style="height:38px;padding:0 10px;border-radius:6px;'
+                f'background:#3a1a1a;border:1px solid #662222;color:#ff8888;'
+                f'font-size:12px;font-weight:bold;cursor:pointer;white-space:nowrap;'
+                f'transition:transform 0.12s;" '
+                f'onmousedown="this.style.transform=\'scale(0.95)\'" '
+                f'onmouseup="this.style.transform=\'scale(1)\'" '
+                f'onclick="clickAR(\'ar_cancel_{p["number"]}\')">✖</button>'
+                f'</div>\n'
+            )
+        else:
+            table_html += (
+                f'<div style="background:{bg};padding:8px 14px;margin:3px 0;'
+                f'border-radius:6px;color:white;font-size:15px;text-align:{align};">'
+                f'{text}</div>\n'
+            )
+
+    # === Кнопки управления ===
     night_style = "background:linear-gradient(135deg,#27ae60,#219a52);color:#fff;border:none;" if all_done else "background:#262730;color:#666;border:1px solid #444;opacity:0.35;"
     night_disabled = "" if all_done else "disabled"
     night_onclick = "clickAR('ar_Ночь0')" if all_done else ""
 
-    # Ручной режим — сетка выбора ролей
+    # === Ручной режим — сетка выбора ролей ===
     manual_html = ""
-    if st.session_state.get('role_assignment_mode') == "manual":
+    if is_manual:
         for role_name in ["Дон", "Шериф", "Мафия"]:
             role_count = roles.get(role_name, 0)
             if role_count == 0:
@@ -701,20 +721,12 @@ def screen_assign_roles():
                     manual_html += f'<button style="flex:0 0 18%;height:36px;border-radius:6px;background:#333;border:1px solid #555;color:#666;font-size:12px;font-weight:bold;cursor:default;" disabled>{lbl}</button>'
                 else:
                     lbl = f"#{p['number']}"
-                    manual_html += f'<button style="flex:0 0 18%;height:36px;border-radius:6px;background:#262730;border:1px solid #666;color:#ccc;font-size:12px;font-weight:bold;cursor:pointer;" onclick="clickAR(\'ar_m_{role_name}_{p["number"]}\')">{lbl}</button>'
+                    manual_html += f'<button style="flex:0 0 18%;height:36px;border-radius:6px;background:#262730;border:1px solid #666;color:#ccc;font-size:12px;font-weight:bold;cursor:pointer;transition:transform 0.12s;" onmousedown="this.style.transform=\'scale(0.95)\'" onmouseup="this.style.transform=\'scale(1)\'" onclick="clickAR(\'ar_m_{role_name}_{p["number"]}\')">{lbl}</button>'
             manual_html += '</div>'
 
-    # Кнопки снятия роли (если не все назначены)
-    cancel_html = ""
-    if not all_done:
-        for p in sorted_p:
-            if p['role'] in ['Дон', 'Мафия', 'Шериф']:
-                cancel_html += f'<button style="width:100%;height:32px;border-radius:6px;background:#3a1a1a;border:1px solid #662222;color:#ff8888;font-size:12px;font-weight:bold;cursor:pointer;margin:2px 0;" onclick="clickAR(\'ar_cancel_{p["number"]}\')">✖ Снять роль #{p["number"]}</button>'
-
-    # Считаем высоту
-    manual_extra = 200 if st.session_state.get('role_assignment_mode') == "manual" else 0
-    cancel_extra = sum(1 for p in sorted_p if p['role'] in ['Дон', 'Мафия', 'Шериф']) * 36 if not all_done else 0
-    total_height = 340 + n * 42 + manual_extra + cancel_extra + 80
+    # === Высота ===
+    manual_extra = 200 if is_manual else 0
+    total_height = 320 + n * 48 + manual_extra + 80
 
     components.html(f"""
     <style>
@@ -728,14 +740,14 @@ def screen_assign_roles():
         .btn {{
             flex: 1; height: 44px; border-radius: 10px;
             font-size: 13px; font-weight: bold; cursor: pointer;
-            transition: transform 0.12s; padding: 0 6px;
+            transition: transform 0.12s; padding: 0 6px; border: none;
         }}
         .btn:active {{ transform: scale(0.95); }}
         .btn:hover {{ filter: brightness(1.15); }}
-        .btn-gray {{ background: #262730; color: #ccc; border: 1px solid #555; }}
-        .btn-blue {{ background: linear-gradient(135deg, #3498db, #2980b9); color: #fff; border: none; }}
-        .btn-orange {{ background: linear-gradient(135deg, #e67e22, #d35400); color: #fff; border: none; }}
+        .btn-blue {{ background: linear-gradient(135deg, #3498db, #2980b9); color: #fff; }}
+        .btn-orange {{ background: linear-gradient(135deg, #e67e22, #d35400); color: #fff; }}
         .btn-red {{ background: #3a1a1a; color: #ff8888; border: 1px solid #662222; }}
+        .btn-gray {{ background: #262730; color: #ccc; border: 1px solid #555; }}
         .divider {{ border-top: 1px solid #333; margin: 4px 0; }}
         .table {{ display: flex; flex-direction: column; gap: 0; }}
         .status {{ text-align: center; padding: 8px; font-size: 16px; font-weight: bold; }}
@@ -754,7 +766,6 @@ def screen_assign_roles():
         </div>
         <div class="divider"></div>
         <div class="manual-section">{manual_html}</div>
-        {cancel_html}
         <div class="divider"></div>
         <div class="table">{table_html}</div>
         {"<div class='status ok'>✅ Все роли назначены!</div>" if all_done else ""}
@@ -816,7 +827,6 @@ def screen_assign_roles():
             go("night_zero")
             st.rerun()
 
-    # Кнопки ручного назначения
     for role_name in ["Дон", "Шериф", "Мафия"]:
         for p in sorted_p:
             if st.button(f"ar_m_{role_name}_{p['number']}", key=f"ar_m_{role_name}_{p['number']}"):
@@ -828,7 +838,6 @@ def screen_assign_roles():
                     _recalc_peaceful(players, roles)
                     st.rerun()
 
-    # Кнопки снятия роли
     for p in sorted_p:
         if st.button(f"ar_cancel_{p['number']}", key=f"ar_cancel_{p['number']}"):
             p['role'] = ""
@@ -839,7 +848,7 @@ def screen_assign_roles():
             _recalc_peaceful(players, roles)
             st.rerun()
 
-    # Прячем ar_ кнопки и скроллим вверх
+    # Прячем ar_ кнопки
     components.html("""
     <script>
     (function() {
@@ -865,6 +874,7 @@ def screen_assign_roles():
     })();
     </script>
     """, height=0)
+
 
 
 def _do_auto_assign(players, roles):
