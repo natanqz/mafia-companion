@@ -20,7 +20,7 @@ def screen_game_night():
     day = st.session_state.day_number
 
     # Фоновая музыка ночи
-    background_music("music/night.mp3")
+    background_music("night.mp3")
 
     st.markdown(
         f'<div style="text-align:center;padding:20px 0 5px;">'

@@ -9,6 +9,7 @@ import streamlit.components.v1 as components
 # ---- SETTINGS ----
 DB_FILE = 'mafia_db.json'
 MUSIC_FOLDER = os.path.join(os.path.dirname(__file__), "music")
+SOUNDS_FOLDER = os.path.join(os.path.dirname(__file__), "sounds")
 METRONOME_SOUND = "metronome.mp3"
 WHISTLE_SOUND = "whistle.mp3"
 
@@ -244,7 +245,7 @@ def get_play_count(db, pid):
 
 # ---- SOUND ----
 def play_sound_html(fn):
-    fn_full = os.path.join(MUSIC_FOLDER, fn)
+    fn_full = os.path.join(SOUNDS_FOLDER, fn)
     if not os.path.exists(fn_full):
         return
     audio_bytes = open(fn_full, 'rb').read()
@@ -253,6 +254,8 @@ def play_sound_html(fn):
         f'<audio autoplay><source src="data:audio/mp3;base64,{b64}" type="audio/mp3"></audio>',
         unsafe_allow_html=True
     )
+
+
 
 def music_player():
     files = [f for f in os.listdir(MUSIC_FOLDER) if f.endswith(".mp3")]
