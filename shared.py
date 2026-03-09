@@ -107,6 +107,26 @@ def inject_styles():
     .fs-civil {{ background: #cc0000; color: #fff; }}
     .fs-sheriff-found {{ background: #00aa00; color: #fff; }}
     .fs-civil-for-don {{ background: #cc0000; color: #fff; }}
+
+    /* ПРИНУДИТЕЛЬНО горизонтальные колонки на мобильном */
+    @media (max-width: 640px) {{
+        [data-testid="stHorizontalBlock"] {{
+            flex-direction: row !important;
+            flex-wrap: nowrap !important;
+            gap: 4px !important;
+        }}
+        [data-testid="column"] {{
+            width: auto !important;
+            flex: 1 1 0 !important;
+            min-width: 0 !important;
+        }}
+        [data-testid="column"] div.stButton > button {{
+            font-size: 12px !important;
+            padding: 4px 2px !important;
+            min-height: 36px !important;
+            height: auto !important;
+        }}
+    }}
     </style>
 
     <script>

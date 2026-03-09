@@ -89,7 +89,7 @@ def screen_select_players():
 
     st.markdown("---")
     sorted_players = sorted(db['players'], key=lambda p: get_play_count(db, p['id']), reverse=True)
-    cols_count = 2
+    cols_count = 3
     rows = math.ceil(len(sorted_players) / cols_count)
     for r in range(rows):
         columns = st.columns(cols_count)
