@@ -689,6 +689,11 @@ def screen_assign_roles():
             if p['role'] in ['Дон', 'Мафия', 'Шериф']:
                 cancel_html += f'<button style="width:100%;height:32px;border-radius:6px;background:#3a1a1a;border:1px solid #662222;color:#ff8888;font-size:12px;font-weight:bold;cursor:pointer;margin:2px 0;" onclick="clickAR(\'ar_cancel_{p["number"]}\')">✖ Снять роль #{p["number"]}</button>'
 
+    # Считаем высоту
+    manual_extra = 200 if st.session_state.get('role_assignment_mode') == "manual" else 0
+    cancel_extra = sum(1 for p in sorted_p if p['role'] in ['Дон', 'Мафия', 'Шериф']) * 36 if not all_done else 0
+    total_height = 340 + n * 42 + manual_extra + cancel_extra + 80
+
     components.html(f"""
     <style>
         * {{ margin: 0; padding: 0; box-sizing: border-box; }}
@@ -751,7 +756,7 @@ def screen_assign_roles():
         }}
     }}
     </script>
-    """, height=max(600, 280 + n * 38 + (len(manual_html) > 0) * 200))
+    """, height=total_height)
 
     # === Скрытые ST-кнопки ===
     if st.button("ar_Случайно", key="ar_auto"):
@@ -762,17 +767,20 @@ def screen_assign_roles():
     if st.button("ar_Вручную", key="ar_manual"):
         st.session_state.role_assignment_mode = "manual"
         st.session_state.manual_assigned = {}
-        for p in players: p['role'] = ""
+        for p in players:
+            p['role'] = ""
         st.rerun()
 
     if st.button("ar_Сбросить", key="ar_reset"):
-        for p in players: p['role'] = ""
+        for p in players:
+            p['role'] = ""
         st.session_state.manual_assigned = {}
         st.session_state.role_assignment_mode = None
         st.rerun()
 
     if st.button("ar_Назад", key="ar_back"):
-        go("select_players"); st.rerun()
+        go("select_players")
+        st.rerun()
 
     if st.button("ar_Перемешать", key="ar_shuffle"):
         numbers = list(range(1, n + 1))
@@ -783,7 +791,8 @@ def screen_assign_roles():
 
     if st.button("ar_Ночь0", key="ar_night0"):
         if all_done:
-            go("night_zero"); st.rerun()
+            go("night_zero")
+            st.rerun()
 
     # Кнопки ручного назначения
     for role_name in ["Дон", "Шериф", "Мафия"]:
@@ -802,7 +811,8 @@ def screen_assign_roles():
         if st.button(f"ar_cancel_{p['number']}", key=f"ar_cancel_{p['number']}"):
             p['role'] = ""
             ma = st.session_state.get('manual_assigned', {})
-            for k in [k for k, v in ma.items() if v == p['number']]: del ma[k]
+            for k in [k for k, v in ma.items() if v == p['number']]:
+                del ma[k]
             st.session_state.manual_assigned = ma
             _recalc_peaceful(players, roles)
             st.rerun()
@@ -833,7 +843,6 @@ def screen_assign_roles():
     })();
     </script>
     """, height=0)
-
 
 
 def _do_auto_assign(players, roles):
