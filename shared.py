@@ -3,21 +3,74 @@ import json
 import os
 import time
 import base64
+import requests
 import streamlit.components.v1 as components
 
 
 # ---- SETTINGS ----
-DB_FILE = 'mafia_db.json'
+DB_PATH = os.path.join(os.path.dirname(__file__), "data", "db.json")
 MUSIC_FOLDER = os.path.join(os.path.dirname(__file__), "music")
 SOUNDS_FOLDER = os.path.join(os.path.dirname(__file__), "sounds")
 METRONOME_SOUND = "metronome.mp3"
 WHISTLE_SOUND = "whistle.mp3"
+GIST_FILENAME = "mafia_db.json"
+
+
+# ---- GIST DB ----
+def _gist_headers():
+    token = st.secrets.get("GIST_TOKEN", "")
+    return {"Authorization": f"token {token}", "Accept": "application/vnd.github.v3+json"}
+
+def _gist_url():
+    gist_id = st.secrets.get("GIST_ID", "")
+    return f"https://api.github.com/gists/{gist_id}"
+
+def load_db():
+    """Читаем БД из GitHub Gist, fallback на локальный файл"""
+    try:
+        r = requests.get(_gist_url(), headers=_gist_headers(), timeout=5)
+        if r.status_code == 200:
+            content = r.json()['files'][GIST_FILENAME]['content']
+            return json.loads(content)
+    except:
+        pass
+    # Fallback — локальный файл (для локальной разработки)
+    if os.path.exists(DB_PATH):
+        with open(DB_PATH, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    return {"players": [], "games": [], "last_composition": []}
+
+def save_db(db):
+    """Пишем БД в GitHub Gist + локальный fallback"""
+    # Локально всегда сохраняем
+    os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
+    with open(DB_PATH, 'w', encoding='utf-8') as f:
+        json.dump(db, f, ensure_ascii=False, indent=2)
+    # В Gist
+    try:
+        requests.patch(
+            _gist_url(),
+            headers=_gist_headers(),
+            json={"files": {GIST_FILENAME: {"content": json.dumps(db, ensure_ascii=False, indent=2)}}},
+            timeout=5
+        )
+    except:
+        pass
+
+def get_player(db, pid):
+    return next((p for p in db['players'] if p['id'] == pid), None)
+
+def get_play_count(db, pid):
+    p = get_player(db, pid)
+    if p and 'history' in p:
+        return len(p['history'])
+    return 0
+
 
 # ---- STYLES ----
 def inject_styles():
     st.markdown("""
     <style>
-    /* Колонки ПЕРЕНОСЯТСЯ а не улетают */
     [data-testid="stHorizontalBlock"] {
         flex-wrap: wrap !important;
         flex-direction: row !important;
@@ -30,8 +83,6 @@ def inject_styles():
         max-width: 50% !important;
         overflow: visible !important;
     }
-
-    /* Компактная дефолтная кнопка */
     div.stButton > button {
         height: 36px !important;
         min-height: 36px !important;
@@ -44,8 +95,6 @@ def inject_styles():
         overflow: hidden !important;
         text-overflow: ellipsis !important;
     }
-
-    /* Уменьшаем вертикальные отступы между элементами */
     div[data-testid="stVerticalBlock"] > div {
         padding-top: 0 !important;
         padding-bottom: 0 !important;
@@ -54,7 +103,6 @@ def inject_styles():
         margin-top: 2px !important;
         margin-bottom: 2px !important;
     }
-
     .big-timer {
         font-size: 96px;
         text-align: center;
@@ -75,9 +123,6 @@ def inject_styles():
     .fs-civil { background: #cc0000; color: #fff; }
     .fs-sheriff-found { background: #00aa00; color: #fff; }
     .fs-civil-for-don { background: #cc0000; color: #fff; }
-    
-    
-        /* Ещё компактнее вертикальные gap между кнопками */
     div[data-testid="stVerticalBlock"] > div[data-testid="stVerticalBlockBorderWrapper"] {
         padding-top: 0 !important;
         padding-bottom: 0 !important;
@@ -87,8 +132,6 @@ def inject_styles():
         margin-bottom: 0 !important;
         gap: 4px !important;
     }
-    
-    
     </style>
     """, unsafe_allow_html=True)
 
@@ -125,22 +168,17 @@ def inject_gold_buttons(texts=None):
     """, height=0)
 
 
-
+# ---- MUSIC ----
 def background_music(filename, loop=True):
-    """Фоновая музыка"""
     fn_full = os.path.join(MUSIC_FOLDER, filename)
     if not os.path.exists(fn_full):
         st.warning(f"Файл не найден: {fn_full}")
         return
-
     size_mb = os.path.getsize(fn_full) / (1024 * 1024)
-
     if size_mb > 2:
-        # Большой файл — через st.audio (проще, но обрывается при rerun)
         audio_bytes = open(fn_full, 'rb').read()
         st.audio(audio_bytes, format='audio/mp3', autoplay=True, loop=loop)
     else:
-        # Маленький файл — через JS (не обрывается при rerun)
         audio_bytes = open(fn_full, 'rb').read()
         b64 = base64.b64encode(audio_bytes).decode()
         loop_js = "audio.loop = true;" if loop else ""
@@ -166,7 +204,6 @@ def background_music(filename, loop=True):
         """, height=0)
 
 def stop_background_music():
-    """Остановить фоновую музыку"""
     components.html("""
     <script>
     (function() {
@@ -176,25 +213,6 @@ def stop_background_music():
     </script>
     """, height=0)
 
-# ---- DATABASE ----
-def load_db():
-    if not os.path.exists(DB_FILE):
-        return {"players": [], "games": [], "last_composition": []}
-    with open(DB_FILE, 'r', encoding='utf8') as f:
-        return json.load(f)
-
-def save_db(db):
-    with open(DB_FILE, 'w', encoding='utf8') as f:
-        json.dump(db, f, indent=2, ensure_ascii=False)
-
-def get_player(db, pid):
-    return next((p for p in db['players'] if p['id'] == pid), None)
-
-def get_play_count(db, pid):
-    p = get_player(db, pid)
-    if p and 'history' in p:
-        return len(p['history'])
-    return 0
 
 # ---- SOUND ----
 def play_sound_html(fn):
@@ -207,8 +225,6 @@ def play_sound_html(fn):
         f'<audio autoplay><source src="data:audio/mp3;base64,{b64}" type="audio/mp3"></audio>',
         unsafe_allow_html=True
     )
-
-
 
 def music_player():
     files = [f for f in os.listdir(MUSIC_FOLDER) if f.endswith(".mp3")]
@@ -232,9 +248,11 @@ def music_player():
         if st.button("⏹️", key="music_stop", use_container_width=True):
             pass
 
+
 # ---- NAVIGATION ----
 def go(screen):
     st.session_state.screen = screen
+
 
 # ---- SESSION STATE ----
 def init_state():
@@ -269,6 +287,7 @@ def init_state():
     for k, v in defaults.items():
         if k not in st.session_state:
             st.session_state[k] = v
+
 
 # ---- HELPERS ----
 def calculate_roles(num_players):
@@ -306,7 +325,6 @@ def get_speaker_order(day, players):
     result = [num_to_player[num] for num in rotated_numbers]
     return result
 
-
 def role_emoji(role):
     mapping = {
         "Дон": "⭐",
@@ -316,27 +334,20 @@ def role_emoji(role):
     }
     return mapping.get(role, "❓")
 
-
 def p_num(p):
-    """Номер игрока с эмодзи роли если включено"""
     if st.session_state.get("show_roles") and p.get('role'):
         return f"{role_emoji(p['role'])}#{p['number']}"
     return f"#{p['number']}"
 
-
 def p_name(p):
-    """Имя игрока с ролью если включено"""
     if st.session_state.get("show_roles") and p.get('role'):
         return f"{p['nickname']} ({role_emoji(p['role'])} {p['role']})"
     return p['nickname']
 
-
 def p_bar_text(p):
-    """Текст для прогресс-бара: эмодзи + номер + имя"""
     if st.session_state.get("show_roles") and p.get('role'):
         return f"{role_emoji(p['role'])} ㅤㅤ{p['number']} ㅤㅤ{p['nickname']}"
     return f"#{p['number']}. {p['nickname']}"
-
 
 def run_timer_no_block(placeholder, duration=60):
     for sec in range(duration, -1, -1):
