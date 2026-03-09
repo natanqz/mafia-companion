@@ -15,11 +15,20 @@ import streamlit.components.v1 as components
 def screen_main_menu():
     import streamlit.components.v1 as components
 
-    # Прячем нативные кнопки через CSS
+    # Прячем нативные кнопки по ключам
     st.markdown("""
     <style>
-    .hidden-buttons { display: none !important; }
-    .hidden-buttons * { display: none !important; }
+    #button-main_new,
+    #button-main_players,
+    #button-main_archive,
+    #button-main_export,
+    div[data-testid="stButton"]:has(button[kind]) {
+        position: absolute !important;
+        left: -9999px !important;
+        height: 0 !important;
+        overflow: hidden !important;
+        pointer-events: none !important;
+    }
     </style>
     """, unsafe_allow_html=True)
 
@@ -84,47 +93,29 @@ def screen_main_menu():
     <div class="menu-wrap">
         <div class="logo">🎭</div>
         <div class="title">Mafia Companion</div>
-        <button class="btn-big" onclick="clickBtn('_new')">
+        <button class="btn-big" onclick="clickBtn('🕹️')">
             <span class="icon">🕹️</span>
             <span class="label">Новая игра</span>
         </button>
         <div class="row">
-            <button class="btn-sm" onclick="clickBtn('_players')">
+            <button class="btn-sm" onclick="clickBtn('👥')">
                 <span class="icon">👥</span>
                 <span class="label">Игроки</span>
             </button>
-            <button class="btn-sm" onclick="clickBtn('_archive')">
+            <button class="btn-sm" onclick="clickBtn('📦')">
                 <span class="icon">📦</span>
                 <span class="label">Архив</span>
             </button>
-            <button class="btn-sm" onclick="clickBtn('_export')">
+            <button class="btn-sm" onclick="clickBtn('📤')">
                 <span class="icon">📤</span>
                 <span class="label">Экспорт</span>
             </button>
         </div>
     </div>
     <script>
-    function clickBtn(suffix) {
+    function clickBtn(emoji) {
         const doc = window.parent.document;
-        const buttons = doc.querySelectorAll('button');
-        for (let b of buttons) {
-            const id = b.id || '';
-            const testid = b.getAttribute('data-testid') || '';
-            const text = b.textContent || '';
-            const key = b.closest('[id]')?.id || '';
-            if (key.includes(suffix) || id.includes(suffix)) {
-                b.click();
-                return;
-            }
-        }
-        // fallback: по тексту
-        const map = {
-            '_new': '🕹️',
-            '_players': '👥',
-            '_archive': '📦',
-            '_export': '📤'
-        };
-        const emoji = map[suffix];
+        const buttons = doc.querySelectorAll('button[data-testid="baseButton-secondary"]');
         for (let b of buttons) {
             if (b.textContent.includes(emoji)) {
                 b.click();
@@ -135,8 +126,7 @@ def screen_main_menu():
     </script>
     """, height=420)
 
-    # Скрытые Streamlit-кнопки
-    st.markdown('<div class="hidden-buttons">', unsafe_allow_html=True)
+    # Streamlit-кнопки (визуально скрыты, но кликабельны через JS)
     if st.button("🕹️ Новая", key="main_new"):
         go("select_mode")
         st.rerun()
@@ -149,7 +139,22 @@ def screen_main_menu():
     if st.button("📤 Экспорт", key="main_export"):
         go("export")
         st.rerun()
-    st.markdown('</div>', unsafe_allow_html=True)
+
+    # Прячем кнопки после рендера через JS
+    st.markdown("""
+    <script>
+    const btns = document.querySelectorAll('button[data-testid="baseButton-secondary"]');
+    btns.forEach(b => {
+        if (['🕹️','👥','📦','📤'].some(e => b.textContent.includes(e))) {
+            b.closest('div[data-testid="stButton"]').style.cssText = 
+                'position:absolute;left:-9999px;height:0;overflow:hidden;';
+        }
+    });
+    </script>
+    """, unsafe_allow_html=True)
+
+
+
 def screen_select_mode():
     st.markdown(
         '<div style="text-align:center;padding:40px 0 10px;">'
