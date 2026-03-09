@@ -276,26 +276,37 @@ def screen_select_players():
         st.session_state.selected_pids = []
 
     count = len(st.session_state.selected_pids)
-    total = len(db['players'])
-    min_players = 7
-    can_go = count >= min_players
-    display_max = max(total, count, min_players)
+    can_go = count >= 7
 
-    # Прячем нативные кнопки и экспандеры
+    # Логика счётчика
+    if count <= 6:
+        counter_bg = "#8b0000"
+        counter_text = f"{count} / 7"
+        counter_sub = "соберите минимум"
+    elif count <= 9:
+        counter_bg = "#8b7500"
+        counter_text = f"{count} / 10"
+        counter_sub = "можно начать"
+    elif count == 10:
+        counter_bg = "#1a6b1a"
+        counter_text = "10 / 10"
+        counter_sub = "👑 Идеально 👑"
+    else:
+        counter_bg = "#8b7500"
+        counter_text = f"{count} игроков"
+        counter_sub = "можно начать"
+
+    # Прячем нативные элементы
     st.markdown("""
     <style>
-    div[data-testid="stMainBlockContainer"] div[data-testid="stButton"] {
+    div[data-testid="stMainBlockContainer"] div[data-testid="stButton"],
+    div[data-testid="stMainBlockContainer"] div[data-testid="stTextInput"] {
         height: 0px !important;
         min-height: 0px !important;
         overflow: hidden !important;
         margin: 0 !important;
         padding: 0 !important;
         opacity: 0 !important;
-    }
-    div[data-testid="stMainBlockContainer"] div[data-testid="stExpander"],
-    div[data-testid="stMainBlockContainer"] div[data-testid="stTextInput"],
-    div[data-testid="stMainBlockContainer"] div[data-testid="stMarkdownContainer"] {
-        /* не прячем — нужны для формы добавления */
     }
     </style>
     """, unsafe_allow_html=True)
@@ -332,9 +343,15 @@ def screen_select_players():
             pid = str(uuid.uuid4())
             db['players'].append({"id": pid, "real_name": rn, "nickname": nn, "history": []})
             save_db(db)
+            # Автовыбор нового игрока
+            st.session_state.selected_pids.append(pid)
             st.session_state.qa_name = ""
             st.session_state.qa_nick = ""
             st.rerun()
+
+    # Скрытые инпуты
+    st.text_input("n", key="qa_name", label_visibility="collapsed")
+    st.text_input("k", key="qa_nick", label_visibility="collapsed")
 
     # === Генерируем HTML ===
     players_html = ""
@@ -352,11 +369,10 @@ def screen_select_players():
     has_last = bool(db.get('last_composition'))
     next_opacity = "1" if can_go else "0.35"
     next_cursor = "pointer" if can_go else "not-allowed"
-    counter_color = "#4CAF50" if can_go else "#ff8844"
 
     repeat_html = ""
     if has_last:
-        repeat_html = '<button class="ctrl-btn btn-repeat" onclick="clickBtn(\'sp_Повтор\')">🔄 Повтор</button>'
+        repeat_html = '<button class="ctrl-btn btn-repeat" onclick="clickBtn(\'sp_Повтор\')">🔄</button>'
 
     components.html(f"""
     <style>
@@ -365,21 +381,27 @@ def screen_select_players():
         .wrap {{
             display: flex;
             flex-direction: column;
-            padding: 12px 8px;
-            gap: 10px;
+            padding: 10px 8px;
+            gap: 8px;
         }}
         .header {{ text-align: center; padding: 4px 0; }}
-        .header .icon {{ font-size: 60px; }}
-        .header .title {{ font-size: 20px; font-weight: bold; color: #fff; margin: 4px 0; }}
+        .header .icon {{ font-size: 56px; }}
+        .header .title {{ font-size: 20px; font-weight: bold; color: #fff; margin: 2px 0; }}
         .counter {{
             text-align: center;
-            font-size: 18px;
-            color: #aaa;
-            padding: 6px 0;
+            padding: 10px 16px;
+            border-radius: 12px;
+            background: {counter_bg};
         }}
-        .counter b {{
-            color: {counter_color};
-            font-size: 30px;
+        .counter .num {{
+            font-size: 32px;
+            font-weight: bold;
+            color: #fff;
+        }}
+        .counter .sub {{
+            font-size: 13px;
+            color: rgba(255,255,255,0.7);
+            margin-top: 2px;
         }}
         .controls {{
             display: flex;
@@ -389,11 +411,11 @@ def screen_select_players():
             height: 44px;
             border-radius: 10px;
             border: 1px solid #555;
-            font-size: 13px;
+            font-size: 14px;
             font-weight: bold;
             cursor: pointer;
             transition: transform 0.12s;
-            padding: 0 12px;
+            padding: 0 14px;
         }}
         .ctrl-btn:active {{ transform: scale(0.95); }}
         .btn-back {{
@@ -417,14 +439,13 @@ def screen_select_players():
             cursor: {next_cursor};
             font-size: 15px;
         }}
-        .btn-start:hover {{ opacity: {next_opacity}; }}
         .divider {{ border-top: 1px solid #333; margin: 2px 0; }}
         .grid {{
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 5px;
             overflow-y: auto;
-            max-height: 400px;
+            max-height: 360px;
             padding-right: 4px;
         }}
         .grid::-webkit-scrollbar {{ width: 4px; }}
@@ -457,16 +478,13 @@ def screen_select_players():
             color: #666;
             font-weight: normal;
         }}
-        .p-btn.sel .games {{
-            color: #8bc78b;
-        }}
+        .p-btn.sel .games {{ color: #8bc78b; }}
         .add-section {{
-            margin-top: 4px;
             border-top: 1px solid #333;
             padding-top: 8px;
         }}
         .add-title {{
-            font-size: 14px;
+            font-size: 13px;
             color: #aaa;
             margin-bottom: 6px;
             font-weight: bold;
@@ -490,12 +508,12 @@ def screen_select_players():
         .add-row input::placeholder {{ color: #666; }}
         .btn-add {{
             height: 36px;
+            width: 42px;
             border-radius: 6px;
             background: #2d5a2d;
             border: 1px solid #4CAF50;
             color: #fff;
-            padding: 0 14px;
-            font-size: 13px;
+            font-size: 18px;
             font-weight: bold;
             cursor: pointer;
         }}
@@ -507,7 +525,10 @@ def screen_select_players():
             <div class="icon">👥</div>
             <div class="title">Выбор игроков</div>
         </div>
-        <div class="counter">Выбрано: <b>{count}</b> / {display_max}</div>
+        <div class="counter">
+            <div class="num">{counter_text}</div>
+            <div class="sub">{counter_sub}</div>
+        </div>
         <div class="controls">
             <button class="ctrl-btn btn-back" onclick="clickBtn('sp_Назад')">⬅️</button>
             {repeat_html}
@@ -520,7 +541,7 @@ def screen_select_players():
             {players_html}
         </div>
         <div class="add-section">
-            <div class="add-title">➕ Добавить игрока</div>
+            <div class="add-title">➕ Быстрое добавление</div>
             <div class="add-row">
                 <input type="text" id="qa_name" placeholder="Имя">
                 <input type="text" id="qa_nick" placeholder="Псевдоним">
@@ -545,26 +566,26 @@ def screen_select_players():
         const name = document.getElementById('qa_name').value.trim();
         const nick = document.getElementById('qa_nick').value.trim();
         if (!name || !nick) return;
-        // Записываем в ST session через скрытые инпуты
         const doc = window.parent.document;
-        const inputs = doc.querySelectorAll('input[type="text"]');
-        if (inputs.length >= 2) {{
-            const nameInput = inputs[inputs.length - 2];
-            const nickInput = inputs[inputs.length - 1];
-            const nativeSet = Object.getOwnPropertyDescriptor(window.parent.HTMLInputElement.prototype, 'value').set;
+        const inputs = doc.querySelectorAll('input[aria-label]');
+        let nameInput = null, nickInput = null;
+        inputs.forEach(inp => {{
+            const label = (inp.getAttribute('aria-label') || '').toLowerCase();
+            if (label === 'n') nameInput = inp;
+            if (label === 'k') nickInput = inp;
+        }});
+        if (nameInput && nickInput) {{
+            const nativeSet = Object.getOwnPropertyDescriptor(
+                window.parent.HTMLInputElement.prototype, 'value').set;
             nativeSet.call(nameInput, name);
             nameInput.dispatchEvent(new Event('input', {{ bubbles: true }}));
             nativeSet.call(nickInput, nick);
             nickInput.dispatchEvent(new Event('input', {{ bubbles: true }}));
-            setTimeout(() => clickBtn('sp_Добавить'), 200);
+            setTimeout(() => clickBtn('sp_Добавить'), 300);
         }}
     }}
     </script>
     """, height=750)
-
-    # Скрытые инпуты для добавления
-    st.text_input("qa_name_hidden", key="qa_name", label_visibility="collapsed")
-    st.text_input("qa_nick_hidden", key="qa_nick", label_visibility="collapsed")
 
 
 def _finalize_players(db):
