@@ -4,8 +4,9 @@ import time
 from shared import (
     go, get_alive, get_speaker_order,
     play_sound_html, METRONOME_SOUND, WHISTLE_SOUND, sync_music,
-    run_timer_no_block, role_emoji, p_num, p_name, p_bar_text
+    role_emoji, p_num, p_name, p_bar_text
 )
+import streamlit.components.v1 as components
 
 GRID_COLS = 5
 
@@ -31,97 +32,518 @@ def screen_game_day():
     phase = st.session_state.day_phase
     all_done = speaker_idx >= len(order)
 
-    st.header(f"☀️ День {day}")
-
-    if all_done:
-        st.success("✅ Все высказались!")
-        live_zone = st.empty()
-        _draw_player_bars(live_zone, players, order, speaker_idx)
-        st.markdown("---")
-        if st.session_state.nominees:
-            st.markdown("**Выставлены:**")
-            _render_nominees_summary(players)
-        _render_bottom_buttons(day)
-        st.markdown("---")
-        _render_fouls(players, day)
-        st.markdown("---")
-        st.checkbox("👁️ Показывать роли", value=st.session_state.get("show_roles", False),
-                    key="show_roles_cb", on_change=_toggle_roles)
-        return
-
-    current = order[speaker_idx]
-    is_last = speaker_idx == len(order) - 1
-
-    if current['fouls'] >= 4:
-        st.error(f"🚫 {p_num(current)} {p_name(current)} — 4 фола!")
-        if st.button("⏭️ Пропустить", use_container_width=True): _next_speaker(); st.rerun()
-        _render_static_players(players, order, speaker_idx)
-        return
-
-    if phase == "idle":
-        if speaker_idx == 0:
-            st.markdown(f'<div style="background:#2d1a4e;color:#fff;padding:12px 16px;border-radius:8px;font-size:18px;font-weight:bold;margin:8px 0;">📢 Открывает стол: {p_num(current)} {p_name(current)}</div>', unsafe_allow_html=True)
-        elif is_last:
-            st.markdown(f'<div style="background:#2d1a4e;color:#fff;padding:12px 16px;border-radius:8px;font-size:18px;font-weight:bold;margin:8px 0;">🔒 Закрывает стол: {p_num(current)} {p_name(current)}</div>', unsafe_allow_html=True)
+    # --- Текущий и следующий ---
+    if not all_done:
+        current = order[speaker_idx]
+        current_label = f"🗣️ Говорит #{current['number']} {current['nickname']}"
+        if speaker_idx + 1 < len(order):
+            nxt = order[speaker_idx + 1]
+            next_label = f"Готовится #{nxt['number']} {nxt['nickname']}"
         else:
-            st.info(f"🗣️ Минута для: **{p_num(current)} {p_name(current)}**")
+            next_label = "Последний оратор"
     else:
-        st.info(f"🗣️ Говорит: **{p_num(current)} {p_name(current)}**")
+        current_label = "✅ Все высказались"
+        next_label = ""
 
-    col_reset, col_timer, col_pause = st.columns([1, 3, 1])
-    with col_reset:
-        if phase == "speaking":
-            if st.button("🔄", key="btn_reset", use_container_width=True):
-                st.session_state.timer_start_time = time.time()
-                st.session_state.timer_duration = 60
-                st.session_state.timer_paused = False; st.rerun()
-    with col_pause:
+    # --- Таймер ---
+    remaining = _get_remaining()
+    if remaining > 10:
+        timer_color = "#fff"
+    elif remaining > 5:
+        timer_color = "#ff8c00"
+    else:
+        timer_color = "#ff2222"
+
+    # --- Главная кнопка ---
+    if all_done:
+        main_btn_label = ""
+        main_btn_action = ""
+        main_btn_style = "display:none;"
+    elif phase == "idle":
+        cur = order[speaker_idx]
+        main_btn_label = f"▶️ Старт #{cur['number']} {cur['nickname']}"
+        main_btn_action = "clickDay('day_Старт')"
+        main_btn_style = "background:linear-gradient(135deg,#27ae60,#219a52);color:#fff;"
+    else:
+        main_btn_label = "🙏 Спасибо"
+        main_btn_action = "clickDay('day_Спасибо')"
+        main_btn_style = "background:linear-gradient(135deg,#e67e22,#d35400);color:#fff;"
+
+    # --- Player bars ---
+    sorted_all = sorted(players, key=lambda p: p['number'])
+    order_nums = [p['number'] for p in order]
+    bars_html = _build_bars_html(sorted_all, order_nums, speaker_idx, phase)
+
+    # --- Nominations grid ---
+    nom_grid_html = _build_nom_grid(sorted_all, day)
+
+    # --- Nominees summary ---
+    nom_summary_html = _build_nom_summary(players)
+
+    # --- Fouls grid ---
+    fouls_grid_html = _build_fouls_grid(sorted_all, day)
+
+    # --- Bottom buttons (all done) ---
+    bottom_html = ""
+    if all_done:
+        has_nominees = bool(st.session_state.get("nominees"))
+        if has_nominees:
+            bottom_html = """
+            <div class="btn-row">
+                <button class="btn btn-gray" onclick="clickDay('day_НикогоНочь')">❌ Никого → Ночь</button>
+                <button class="btn btn-gold" onclick="clickDay('day_Голосование')">🗳️ Голосование</button>
+            </div>
+            """
+        else:
+            bottom_html = """
+            <div class="btn-row">
+                <button class="btn btn-gold" onclick="clickDay('day_НикогоНочь')">🌙 К ночи</button>
+            </div>
+            """
+
+    # --- Show roles ---
+    show_roles = st.session_state.get("show_roles", False)
+    roles_label = "🙈 Скрыть роли" if show_roles else "👁️ Показать роли"
+
+    components.html(f"""
+    <style>
+        * {{ margin:0; padding:0; box-sizing:border-box; }}
+        body {{ background:transparent; font-family:-apple-system,sans-serif; }}
+        .wrap {{ display:flex; flex-direction:column; padding:10px 8px; gap:8px; }}
+        .header {{ text-align:center; }}
+        .header .icon {{ font-size:56px; }}
+        .header .title {{ font-size:22px; font-weight:bold; color:#fff; }}
+
+        /* Timer row */
+        .timer-row {{
+            display:flex; align-items:center; justify-content:center; gap:12px;
+            padding:4px 0;
+        }}
+        .timer-small-btn {{
+            width:44px; height:44px; border-radius:50%;
+            background:#262730; border:1px solid #555; color:#ccc;
+            font-size:18px; cursor:pointer; display:flex;
+            align-items:center; justify-content:center;
+            transition:transform 0.12s;
+        }}
+        .timer-small-btn:active {{ transform:scale(0.9); }}
+        .timer-num {{
+            font-size:72px; font-weight:bold; color:{timer_color};
+            min-width:120px; text-align:center; line-height:1;
+        }}
+
+        /* Main button */
+        .main-btn {{
+            width:100%; height:52px; border-radius:12px;
+            font-size:16px; font-weight:bold; cursor:pointer;
+            border:none; transition:transform 0.12s;
+            {main_btn_style}
+        }}
+        .main-btn:active {{ transform:scale(0.95); }}
+        .main-btn:hover {{ filter:brightness(1.15); }}
+
+        /* Speaker label */
+        .speaker-label {{
+            text-align:center; padding:4px 0;
+        }}
+        .speaker-current {{
+            font-size:18px; font-weight:bold; color:#fff;
+        }}
+        .speaker-next {{
+            font-size:14px; color:#888; margin-top:2px;
+        }}
+
+        .divider {{ border-top:1px solid #333; width:100%; margin:4px 0; }}
+
+        /* Player bars */
+        .bar {{
+            height:38px; display:flex; align-items:center;
+            padding:4px 12px; margin:2px 0; border-radius:6px;
+            font-size:14px; font-weight:bold; position:relative;
+            overflow:hidden; color:#fff;
+        }}
+        .bar-fill {{
+            position:absolute; left:0; top:0; bottom:0;
+            border-radius:6px; z-index:0;
+        }}
+        .bar-content {{
+            position:relative; z-index:1; width:100%;
+            display:flex; justify-content:space-between; align-items:center;
+        }}
+        .bar-dead {{
+            background:#111; color:#555; text-decoration:line-through;
+        }}
+        .bar-waiting {{ background:#1a1a3d; }}
+        .bar-done {{ background:#1a2e1a; }}
+        .bar-speaking {{ background:#1a3a1a; }}
+        .bar-speaking .bar-fill {{
+            background:rgba(76,175,80,0.4);
+            animation: fillBar {remaining}s linear forwards;
+        }}
+        @keyframes fillBar {{
+            from {{ width: var(--start-pct, 0%); }}
+            to {{ width: 100%; }}
+        }}
+
+        /* Grid buttons */
+        .grid {{ display:flex; flex-wrap:wrap; gap:4px; }}
+        .grid-btn {{
+            flex:0 0 18%; height:36px; border-radius:6px;
+            font-size:12px; font-weight:bold; cursor:pointer;
+            border:1px solid #555; background:#262730; color:#ccc;
+            transition:transform 0.12s;
+        }}
+        .grid-btn:active {{ transform:scale(0.95); }}
+        .grid-btn.dead {{
+            background:#111; color:#444; border-color:#333; cursor:default;
+        }}
+        .grid-btn.selected {{
+            background:#1a3a1a; border-color:#4CAF50; color:#fff;
+        }}
+        .grid-btn.foul-btn {{ border-color:#666; }}
+        .grid-btn.foul-max {{ background:#3a1a1a; border-color:#662222; color:#ff4444; }}
+
+        .section-title {{
+            font-size:15px; font-weight:bold; color:#aaa; padding:4px 0;
+        }}
+        .nom-summary {{
+            font-size:14px; color:#ccc; padding:4px 8px;
+            background:#1a1a2e; border-radius:6px; margin:4px 0;
+        }}
+
+        .btn-row {{ display:flex; gap:8px; width:100%; }}
+        .btn {{
+            flex:1; height:48px; border-radius:12px;
+            font-size:15px; font-weight:bold; cursor:pointer;
+            border:none; transition:transform 0.12s;
+            display:flex; align-items:center; justify-content:center;
+        }}
+        .btn:active {{ transform:scale(0.95); }}
+        .btn:hover {{ filter:brightness(1.15); }}
+        .btn-gray {{ background:#262730; color:#ccc; border:1px solid #555; }}
+        .btn-gold {{
+            background:linear-gradient(135deg,#DAA520,#B8860B); color:#fff;
+            box-shadow:0 0 12px rgba(218,165,32,0.4);
+        }}
+        .btn-roles {{
+            width:100%; height:40px; border-radius:10px;
+            background:#1a1a2e; border:1px solid #444; color:#888;
+            font-size:13px; font-weight:bold; cursor:pointer;
+            transition:transform 0.12s;
+        }}
+        .btn-roles:active {{ transform:scale(0.95); }}
+    </style>
+
+    <div class="wrap">
+        <div class="header">
+            <div class="icon">☀️</div>
+            <div class="title">День {day}</div>
+        </div>
+
+        <div class="timer-row">
+            <button class="timer-small-btn" onclick="clickDay('day_Сброс')">🔄</button>
+            <div class="timer-num" id="timerNum">{remaining}</div>
+            <button class="timer-small-btn" onclick="clickDay('day_ТПауза')">⏸️</button>
+        </div>
+
+        <button class="main-btn" id="mainBtn" onclick="{main_btn_action}">{main_btn_label}</button>
+
+        <div class="speaker-label">
+            <div class="speaker-current" id="speakerCurrent">{current_label}</div>
+            <div class="speaker-next" id="speakerNext">{next_label}</div>
+        </div>
+
+        <div class="divider"></div>
+        {bars_html}
+        <div class="divider"></div>
+
+        <div class="section-title">🗳️ Выставление на голосование</div>
+        <div class="grid">{nom_grid_html}</div>
+        {nom_summary_html}
+
+        <div class="divider"></div>
+
+        <div class="section-title">⚠️ Фолы</div>
+        <div class="grid">{fouls_grid_html}</div>
+
+        <div class="divider"></div>
+
+        {bottom_html}
+
+        <button class="btn-roles" onclick="clickDay('day_Роли')">{roles_label}</button>
+    </div>
+
+    <script>
+    function clickDay(text) {{
+        const buttons = window.parent.document.querySelectorAll('button');
+        for (let b of buttons) {{
+            if (b.textContent.includes(text)) {{
+                b.style.opacity = '1';
+                b.style.pointerEvents = 'auto';
+                b.click();
+                return;
+            }}
+        }}
+    }}
+    </script>
+    """, height=_calc_day_height(players, all_done, st.session_state.get("nominees")))
+
+    # === Скрытые ST-кнопки ===
+    if st.button("day_Старт", key="day_start"):
+        st.session_state.day_phase = "speaking"
+        st.session_state.timer_start_time = time.time()
+        st.session_state.timer_duration = 60
+        st.session_state.timer_paused = False
+        st.rerun()
+
+    if st.button("day_Спасибо", key="day_thanks"):
+        st.session_state.timer_start_time = None
+        st.session_state.timer_paused = False
+        st.session_state.day_phase = "idle"
+        st.session_state.current_speaker += 1
+        st.session_state.timer_duration = 60
+        st.session_state.timer_paused_remaining = 60
+        st.rerun()
+
+    if st.button("day_Сброс", key="day_reset"):
+        st.session_state.timer_start_time = time.time()
+        st.session_state.timer_duration = 60
+        st.session_state.timer_paused = False
+        st.rerun()
+
+    if st.button("day_ТПауза", key="day_tpause"):
         if phase == "speaking":
             if st.session_state.timer_paused:
-                if st.button("▶️", key="btn_unpause", use_container_width=True):
-                    st.session_state.timer_paused = False
-                    st.session_state.timer_start_time = time.time()
-                    st.session_state.timer_duration = st.session_state.timer_paused_remaining; st.rerun()
+                st.session_state.timer_paused = False
+                st.session_state.timer_start_time = time.time()
+                st.session_state.timer_duration = st.session_state.timer_paused_remaining
             else:
-                if st.button("⏸️", key="btn_pause", use_container_width=True):
-                    st.session_state.timer_paused = True
-                    st.session_state.timer_paused_remaining = _get_remaining()
-                    st.session_state.timer_start_time = None; st.rerun()
-    with col_timer:
-        timer_display = st.empty()
-    remaining = _get_remaining()
-    _draw_timer_only(timer_display, remaining)
+                st.session_state.timer_paused = True
+                st.session_state.timer_paused_remaining = _get_remaining()
+                st.session_state.timer_start_time = None
+        st.rerun()
 
-    if phase == "idle":
-        if st.button(f"▶️ Старт {p_num(current)} {p_name(current)}", use_container_width=True, key="main_btn"):
-            st.session_state.day_phase = "speaking"
-            st.session_state.timer_start_time = time.time()
-            st.session_state.timer_duration = 60
-            st.session_state.timer_paused = False; st.rerun()
-    else:
-        if st.button("🙏 Спасибо", use_container_width=True, key="main_btn"):
-            st.session_state.timer_start_time = None
-            st.session_state.timer_paused = False
-            st.session_state.day_phase = "idle"
-            _next_speaker(); st.rerun()
+    # Nomination buttons
+    sorted_all = sorted(players, key=lambda p: p['number'])
+    for p in sorted_all:
+        if st.button(f"day_nom_{p['number']}", key=f"day_nom_{p['number']}"):
+            if not all_done and speaker_idx < len(order) and p['status'] == 'alive':
+                by_num = order[speaker_idx]['number']
+                st.session_state.nominees[by_num] = p['number']
+                st.session_state.game_log.append(f"День {day}: #{by_num} → #{p['number']}")
+            st.rerun()
 
-    live_zone = st.empty()
-    _draw_player_bars(live_zone, players, order, speaker_idx)
+    # Foul buttons
+    for p in sorted_all:
+        if st.button(f"day_foul_{p['number']}", key=f"day_foul_{p['number']}"):
+            if p['status'] != 'dead' and p['fouls'] < 4:
+                p['fouls'] += 1
+            st.rerun()
 
-    def _render_static_players(all_players, order, speaker_idx):
-        """Статичная отрисовка (без live_zone)"""
-        _draw_player_bars(st.empty(), all_players, order, speaker_idx)
+    if st.button("day_НикогоНочь", key="day_noone"):
+        st.session_state.game_log.append(f"День {day}: никого")
+        _reset_day()
+        go("game_night")
+        st.rerun()
 
-    st.markdown("---")
-    _render_nominations(players, order, speaker_idx, day)
-    st.markdown("---")
-    _render_fouls(players, day)
-    st.markdown("---")
-    st.checkbox("👁️ Показывать роли", value=st.session_state.get("show_roles", False),
-                key="show_roles_cb", on_change=_toggle_roles)
+    if st.button("day_Голосование", key="day_vote"):
+        st.session_state.vote_voters = {}
+        st.session_state.vote_step = 0
+        _reset_day()
+        go("game_vote")
+        st.rerun()
 
+    if st.button("day_Роли", key="day_roles"):
+        st.session_state.show_roles = not st.session_state.get("show_roles", False)
+        st.rerun()
+
+    # === Живой таймер ===
     if phase == "speaking" and not st.session_state.timer_paused and st.session_state.timer_start_time:
-        _run_live_loop(timer_display, live_zone, players, order, speaker_idx)
+        _run_day_live()
+
+    # Прячем day_ кнопки
+    components.html("""
+    <script>
+    (function() {
+        function hide() {
+            const buttons = window.parent.document.querySelectorAll('button');
+            buttons.forEach(b => {
+                if ((b.textContent || '').startsWith('day_')) {
+                    const w = b.closest('div[data-testid="stButton"]');
+                    if (w) w.style.cssText = 'height:0!important;min-height:0!important;overflow:hidden!important;margin:0!important;padding:0!important;opacity:0!important;position:absolute!important;pointer-events:none!important;';
+                }
+            });
+        }
+        setTimeout(hide, 50);
+        setTimeout(hide, 200);
+        setTimeout(hide, 500);
+        setTimeout(hide, 1000);
+    })();
+    </script>
+    """, height=0)
+
+
+def _build_bars_html(sorted_all, order_nums, speaker_idx, phase):
+    html = ""
+    for p in sorted_all:
+        foul_dots = "❗" * p['fouls'] if p['fouls'] > 0 else ""
+        name = f"#{p['number']} {p['nickname']}"
+
+        if p['status'] == 'dead':
+            html += f'<div class="bar bar-dead"><div class="bar-content"><span>{name} 💀</span><span>{foul_dots}</span></div></div>'
+            continue
+
+        pos = order_nums.index(p['number']) if p['number'] in order_nums else 999
+
+        if pos < speaker_idx:
+            html += f'<div class="bar bar-done"><div class="bar-content"><span>✅ {name}</span><span>{foul_dots}</span></div></div>'
+        elif pos == speaker_idx:
+            # Вычисляем стартовый % для CSS анимации
+            if phase == "speaking" and st.session_state.get("timer_start_time"):
+                elapsed = time.time() - st.session_state.timer_start_time
+                total = st.session_state.get("timer_duration", 60)
+                start_pct = min(100, int((elapsed / max(total, 1)) * 100))
+            elif phase == "speaking" and st.session_state.get("timer_paused"):
+                rem = st.session_state.get("timer_paused_remaining", 60)
+                start_pct = min(100, int(((60 - rem) / 60) * 100))
+            else:
+                start_pct = 0
+            html += (
+                f'<div class="bar bar-speaking" style="--start-pct:{start_pct}%;">'
+                f'<div class="bar-fill"></div>'
+                f'<div class="bar-content"><span>🗣️ {name}</span><span>{foul_dots}</span></div></div>'
+            )
+        else:
+            html += f'<div class="bar bar-waiting"><div class="bar-content"><span>{name}</span><span>{foul_dots}</span></div></div>'
+
+    return html
+
+
+def _build_nom_grid(sorted_all, day):
+    nominated_nums = list(st.session_state.get("nominees", {}).values())
+    html = ""
+    for p in sorted_all:
+        is_dead = p['status'] == 'dead'
+        is_nom = p['number'] in nominated_nums
+        if is_dead:
+            html += f'<button class="grid-btn dead" disabled>#{p["number"]}</button>'
+        elif is_nom:
+            html += f'<button class="grid-btn selected" onclick="clickDay(\'day_nom_{p["number"]}\')">🗳️#{p["number"]}</button>'
+        else:
+            html += f'<button class="grid-btn" onclick="clickDay(\'day_nom_{p["number"]}\')">#{p["number"]}</button>'
+    return html
+
+
+def _build_nom_summary(players):
+    nominees = st.session_state.get("nominees", {})
+    if not nominees:
+        return ""
+    grouped = {}
+    for by_n, who_n in nominees.items():
+        grouped.setdefault(who_n, []).append(by_n)
+    html = ""
+    for who_n, by_list in grouped.items():
+        who_p = next((x for x in players if x['number'] == who_n), None)
+        by_strs = []
+        for bn in by_list:
+            bp = next((x for x in players if x['number'] == bn), None)
+            by_strs.append(f"#{bp['number']}" if bp else f"#{bn}")
+        who_str = f"#{who_p['number']} {who_p['nickname']}" if who_p else f"#{who_n}"
+        html += f'<div class="nom-summary">🗳️ <b>{who_str}</b> ← {", ".join(by_strs)}</div>'
+    return html
+
+
+def _build_fouls_grid(sorted_all, day):
+    html = ""
+    for p in sorted_all:
+        is_dead = p['status'] == 'dead'
+        foul_dots = "❗" * p['fouls'] if p['fouls'] > 0 else ""
+        at_max = p['fouls'] >= 4
+        if is_dead:
+            html += f'<button class="grid-btn dead" disabled>#{p["number"]}</button>'
+        elif at_max:
+            html += f'<button class="grid-btn foul-max" disabled>🚫#{p["number"]}</button>'
+        else:
+            html += f'<button class="grid-btn foul-btn" onclick="clickDay(\'day_foul_{p["number"]}\')">{foul_dots}#{p["number"]}</button>'
+    return html
+
+
+def _calc_day_height(players, all_done, nominees):
+    n = len(players)
+    h = 380  # header + timer + main btn + speaker
+    h += n * 44  # bars
+    h += 120  # nom grid
+    if nominees:
+        h += len(set(nominees.values())) * 40  # summaries
+    h += 120  # fouls grid
+    if all_done:
+        h += 60  # bottom buttons
+    h += 60  # roles btn
+    return h
+
+
+def _get_remaining():
+    if st.session_state.get("timer_paused"):
+        return st.session_state.get("timer_paused_remaining", 60)
+    if st.session_state.get("timer_start_time") is None:
+        return st.session_state.get("timer_duration", 60)
+    elapsed = time.time() - st.session_state.timer_start_time
+    return max(0, st.session_state.timer_duration - int(elapsed))
+
+
+def _reset_day():
+    st.session_state.day_phase = "idle"
+    st.session_state.timer_start_time = None
+    st.session_state.timer_duration = 60
+    st.session_state.timer_paused = False
+    st.session_state.timer_paused_remaining = 60
+
+
+def _run_day_live():
+    start = st.session_state.timer_start_time
+    total = st.session_state.timer_duration
+    if not start:
+        return
+
+    while True:
+        elapsed = time.time() - start
+        sec = max(0, total - int(elapsed))
+
+        if sec > 10:
+            color = "#fff"
+        elif sec > 5:
+            color = "#ff8c00"
+        else:
+            color = "#ff2222"
+
+        components.html(f"""
+        <script>
+        (function() {{
+            var pd = window.parent.document;
+            var frames = pd.querySelectorAll('iframe');
+            for (var f of frames) {{
+                try {{
+                    var doc = f.contentDocument || f.contentWindow.document;
+                    var num = doc.getElementById('timerNum');
+                    if (num) {{
+                        num.textContent = '{sec}';
+                        num.style.color = '{color}';
+                        break;
+                    }}
+                }} catch(e) {{}}
+            }}
+        }})();
+        </script>
+        """, height=0)
+
+        if sec <= 10 and sec > 0:
+            play_sound_html(METRONOME_SOUND)
+        if sec == 0:
+            play_sound_html(WHISTLE_SOUND)
+            time.sleep(1.5)
+            break
+
+        time.sleep(1)
 
 
 def _render_nominees_summary(all_players):
