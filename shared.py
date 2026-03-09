@@ -107,47 +107,6 @@ def inject_styles():
     .fs-civil {{ background: #cc0000; color: #fff; }}
     .fs-sheriff-found {{ background: #00aa00; color: #fff; }}
     .fs-civil-for-don {{ background: #cc0000; color: #fff; }}
-
-    /* Запретить горизонтальный скролл */
-    .main .block-container {{
-        overflow-x: hidden !important;
-        max-width: 100vw !important;
-    }}
-
-    /* Все колонки всегда в ряд */
-    [data-testid="stHorizontalBlock"] {{
-        flex-wrap: nowrap !important;
-        overflow: hidden !important;
-        gap: 4px !important;
-    }}
-    [data-testid="column"] {{
-        min-width: 0 !important;
-        overflow: hidden !important;
-    }}
-    [data-testid="column"] button {{
-        overflow: hidden !important;
-        text-overflow: ellipsis !important;
-        white-space: nowrap !important;
-        padding-left: 4px !important;
-        padding-right: 4px !important;
-    }}
-
-    /* Мобильные колонки */
-    @media (max-width: 640px) {{
-        [data-testid="stHorizontalBlock"] {{
-            flex-wrap: nowrap !important;
-        }}
-        [data-testid="column"] {{
-            width: auto !important;
-            flex: 1 1 0 !important;
-            min-width: 0 !important;
-        }}
-        [data-testid="column"] button {{
-            padding: 0.3rem 0.1rem !important;
-            font-size: 0.75rem !important;
-            min-height: 2rem !important;
-        }}
-    }}
     </style>
 
     <script>
@@ -173,7 +132,6 @@ def inject_styles():
     observer.observe(document.body, {{ childList: true, subtree: true }});
     </script>
     """, unsafe_allow_html=True)
-
 
 
 def inject_gold_buttons(texts=None):

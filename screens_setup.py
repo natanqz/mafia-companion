@@ -74,27 +74,22 @@ def screen_select_players():
     st.markdown("---")
     count = len(st.session_state.selected_pids)
     can_go = count >= 7
-    col_cnt, col_next = st.columns([1, 2])
-    with col_cnt:
-        st.markdown(
-            f'<div style="background:#2a2a4a;padding:10px 12px;border-radius:8px;'
-            f'font-size:14px;text-align:center;color:#aaa;'
-            f'height:40px;display:flex;align-items:center;justify-content:center;">'
-            f'Выбрано: <b style="color:white;font-size:18px;margin-left:6px;">{count}</b></div>',
-            unsafe_allow_html=True
-        )
-    with col_next:
-        if can_go:
-            if st.button(f"✅ Далее ({count})", use_container_width=True, key="players_next"):
-                _finalize_players(db); st.rerun()
-        else:
-            st.button("Минимум 7", use_container_width=True, disabled=True, key="players_next_d")
-
+    st.markdown(
+        f'<div style="background:#2a2a4a;padding:10px 12px;border-radius:8px;'
+        f'font-size:18px;text-align:center;color:#aaa;">'
+        f'Выбрано: <b style="color:white;font-size:24px;margin-left:8px;">{count}</b></div>',
+        unsafe_allow_html=True
+    )
+    if can_go:
+        if st.button(f"✅ Далее ({count})", use_container_width=True, key="players_next"):
+            _finalize_players(db); st.rerun()
+    else:
+        st.button("Минимум 7", use_container_width=True, disabled=True, key="players_next_d")
 
 
     st.markdown("---")
     sorted_players = sorted(db['players'], key=lambda p: get_play_count(db, p['id']), reverse=True)
-    cols_count = 3
+    cols_count = 2
     rows = math.ceil(len(sorted_players) / cols_count)
     for r in range(rows):
         columns = st.columns(cols_count)
