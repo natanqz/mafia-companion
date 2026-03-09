@@ -33,21 +33,32 @@ def screen_game_day():
     all_done = speaker_idx >= len(order)
 
     # --- Текущий и следующий ---
+    is_first_speaker = False
+    is_last_speaker = False
     if not all_done:
         current = order[speaker_idx]
-        current_label = f"🗣️ Говорит #{current['number']} {current['nickname']}"
+        is_first_speaker = (speaker_idx == 0)
+        is_last_speaker = (speaker_idx == len(order) - 1)
+        if is_first_speaker:
+            current_label = f"📢 Открывает стол #{current['number']} {current['nickname']}"
+        elif is_last_speaker:
+            current_label = f"🔒 Закрывает стол #{current['number']} {current['nickname']}"
+        else:
+            current_label = f"🗣️ Говорит #{current['number']} {current['nickname']}"
         if speaker_idx + 1 < len(order):
             nxt = order[speaker_idx + 1]
             next_label = f"Готовится #{nxt['number']} {nxt['nickname']}"
         else:
-            next_label = "Последний оратор"
+            next_label = ""
     else:
         current_label = "✅ Все высказались"
         next_label = ""
 
     # --- Таймер ---
     remaining = _get_remaining()
-    if remaining > 10:
+    if phase != "speaking":
+        timer_color = "#555"
+    elif remaining > 10:
         timer_color = "#fff"
     elif remaining > 5:
         timer_color = "#ff8c00"
@@ -58,16 +69,19 @@ def screen_game_day():
     if all_done:
         main_btn_label = ""
         main_btn_action = ""
-        main_btn_style = "display:none;"
+        main_btn_class = "main-btn-hidden"
     elif phase == "idle":
         cur = order[speaker_idx]
         main_btn_label = f"▶️ Старт #{cur['number']} {cur['nickname']}"
         main_btn_action = "clickDay('day_Старт')"
-        main_btn_style = "background:linear-gradient(135deg,#27ae60,#219a52);color:#fff;"
+        if is_first_speaker or is_last_speaker:
+            main_btn_class = "main-btn-special"
+        else:
+            main_btn_class = "main-btn-start"
     else:
         main_btn_label = "🙏 Спасибо"
         main_btn_action = "clickDay('day_Спасибо')"
-        main_btn_style = "background:linear-gradient(135deg,#e67e22,#d35400);color:#fff;"
+        main_btn_class = "main-btn-thanks"
 
     # --- Player bars ---
     sorted_all = sorted(players, key=lambda p: p['number'])
@@ -76,14 +90,12 @@ def screen_game_day():
 
     # --- Nominations grid ---
     nom_grid_html = _build_nom_grid(sorted_all, day)
-
-    # --- Nominees summary ---
     nom_summary_html = _build_nom_summary(players)
 
     # --- Fouls grid ---
     fouls_grid_html = _build_fouls_grid(sorted_all, day)
 
-    # --- Bottom buttons (all done) ---
+    # --- Bottom buttons ---
     bottom_html = ""
     if all_done:
         has_nominees = bool(st.session_state.get("nominees"))
@@ -101,9 +113,11 @@ def screen_game_day():
             </div>
             """
 
-    # --- Show roles ---
     show_roles = st.session_state.get("show_roles", False)
     roles_label = "🙈 Скрыть роли" if show_roles else "👁️ Показать роли"
+
+    # Вычисляем remaining для CSS анимации (только если speaking)
+    anim_duration = remaining if (phase == "speaking" and remaining > 0) else 60
 
     components.html(f"""
     <style>
@@ -114,7 +128,6 @@ def screen_game_day():
         .header .icon {{ font-size:56px; }}
         .header .title {{ font-size:22px; font-weight:bold; color:#fff; }}
 
-        /* Timer row */
         .timer-row {{
             display:flex; align-items:center; justify-content:center; gap:12px;
             padding:4px 0;
@@ -128,30 +141,42 @@ def screen_game_day():
         }}
         .timer-small-btn:active {{ transform:scale(0.9); }}
         .timer-num {{
-            font-size:72px; font-weight:bold; color:{timer_color};
-            min-width:120px; text-align:center; line-height:1;
+            font-size:120px; font-weight:bold; color:{timer_color};
+            min-width:160px; text-align:center; line-height:1;
         }}
 
-        /* Main button */
-        .main-btn {{
+        /* Main buttons */
+        .main-btn-hidden {{ display:none; }}
+        .main-btn-start {{
             width:100%; height:52px; border-radius:12px;
             font-size:16px; font-weight:bold; cursor:pointer;
             border:none; transition:transform 0.12s;
-            {main_btn_style}
+            background:linear-gradient(135deg,#27ae60,#219a52); color:#fff;
         }}
-        .main-btn:active {{ transform:scale(0.95); }}
-        .main-btn:hover {{ filter:brightness(1.15); }}
+        .main-btn-thanks {{
+            width:100%; height:52px; border-radius:12px;
+            font-size:16px; font-weight:bold; cursor:pointer;
+            border:none; transition:transform 0.12s;
+            background:linear-gradient(135deg,#e67e22,#d35400); color:#fff;
+        }}
+        .main-btn-special {{
+            width:100%; height:56px; border-radius:12px;
+            font-size:17px; font-weight:bold; cursor:pointer;
+            border:none; color:#fff;
+            animation: pulseBtn 2s ease-in-out infinite;
+        }}
+        @keyframes pulseBtn {{
+            0%   {{ background:linear-gradient(135deg,#DAA520,#B8860B); box-shadow:0 0 15px rgba(218,165,32,0.5); }}
+            50%  {{ background:linear-gradient(135deg,#8e44ad,#6c3483); box-shadow:0 0 15px rgba(142,68,173,0.5); }}
+            100% {{ background:linear-gradient(135deg,#DAA520,#B8860B); box-shadow:0 0 15px rgba(218,165,32,0.5); }}
+        }}
 
-        /* Speaker label */
-        .speaker-label {{
-            text-align:center; padding:4px 0;
-        }}
-        .speaker-current {{
-            font-size:18px; font-weight:bold; color:#fff;
-        }}
-        .speaker-next {{
-            font-size:14px; color:#888; margin-top:2px;
-        }}
+        [class^="main-btn"]:active {{ transform:scale(0.95); }}
+        [class^="main-btn"]:hover {{ filter:brightness(1.15); }}
+
+        .speaker-label {{ text-align:center; padding:4px 0; }}
+        .speaker-current {{ font-size:18px; font-weight:bold; color:#fff; }}
+        .speaker-next {{ font-size:14px; color:#888; margin-top:2px; }}
 
         .divider {{ border-top:1px solid #333; width:100%; margin:4px 0; }}
 
@@ -170,22 +195,29 @@ def screen_game_day():
             position:relative; z-index:1; width:100%;
             display:flex; justify-content:space-between; align-items:center;
         }}
-        .bar-dead {{
-            background:#111; color:#555; text-decoration:line-through;
-        }}
+        .bar-dead {{ background:#111; color:#555; }}
+        .bar-dead .bar-content {{ text-decoration:line-through; }}
         .bar-waiting {{ background:#1a1a3d; }}
         .bar-done {{ background:#1a2e1a; }}
         .bar-speaking {{ background:#1a3a1a; }}
-        .bar-speaking .bar-fill {{
+        .bar-fill-active {{
             background:rgba(76,175,80,0.4);
-            animation: fillBar {remaining}s linear forwards;
+            animation: fillBar {anim_duration}s linear forwards;
+        }}
+        .bar-fill-paused {{
+            background:rgba(76,175,80,0.4);
+            /* Статичная ширина, без анимации */
+        }}
+        .bar-fill-done {{
+            background:rgba(76,175,80,0.2);
+            width:100%;
         }}
         @keyframes fillBar {{
             from {{ width: var(--start-pct, 0%); }}
             to {{ width: 100%; }}
         }}
 
-        /* Grid buttons */
+        /* Grid */
         .grid {{ display:flex; flex-wrap:wrap; gap:4px; }}
         .grid-btn {{
             flex:0 0 18%; height:36px; border-radius:6px;
@@ -194,18 +226,12 @@ def screen_game_day():
             transition:transform 0.12s;
         }}
         .grid-btn:active {{ transform:scale(0.95); }}
-        .grid-btn.dead {{
-            background:#111; color:#444; border-color:#333; cursor:default;
-        }}
-        .grid-btn.selected {{
-            background:#1a3a1a; border-color:#4CAF50; color:#fff;
-        }}
+        .grid-btn.dead {{ background:#111; color:#444; border-color:#333; cursor:default; }}
+        .grid-btn.selected {{ background:#1a3a1a; border-color:#4CAF50; color:#fff; }}
         .grid-btn.foul-btn {{ border-color:#666; }}
         .grid-btn.foul-max {{ background:#3a1a1a; border-color:#662222; color:#ff4444; }}
 
-        .section-title {{
-            font-size:15px; font-weight:bold; color:#aaa; padding:4px 0;
-        }}
+        .section-title {{ font-size:15px; font-weight:bold; color:#aaa; padding:4px 0; }}
         .nom-summary {{
             font-size:14px; color:#ccc; padding:4px 8px;
             background:#1a1a2e; border-radius:6px; margin:4px 0;
@@ -229,7 +255,6 @@ def screen_game_day():
             width:100%; height:40px; border-radius:10px;
             background:#1a1a2e; border:1px solid #444; color:#888;
             font-size:13px; font-weight:bold; cursor:pointer;
-            transition:transform 0.12s;
         }}
         .btn-roles:active {{ transform:scale(0.95); }}
     </style>
@@ -246,7 +271,8 @@ def screen_game_day():
             <button class="timer-small-btn" onclick="clickDay('day_ТПауза')">⏸️</button>
         </div>
 
-        <button class="main-btn" id="mainBtn" onclick="{main_btn_action}">{main_btn_label}</button>
+        <button class="{main_btn_class}" id="mainBtn"
+            onclick="{main_btn_action}">{main_btn_label}</button>
 
         <div class="speaker-label">
             <div class="speaker-current" id="speakerCurrent">{current_label}</div>
@@ -306,9 +332,10 @@ def screen_game_day():
         st.rerun()
 
     if st.button("day_Сброс", key="day_reset"):
-        st.session_state.timer_start_time = time.time()
-        st.session_state.timer_duration = 60
-        st.session_state.timer_paused = False
+        if phase == "speaking":
+            st.session_state.timer_start_time = time.time()
+            st.session_state.timer_duration = 60
+            st.session_state.timer_paused = False
         st.rerun()
 
     if st.button("day_ТПауза", key="day_tpause"):
@@ -323,7 +350,6 @@ def screen_game_day():
                 st.session_state.timer_start_time = None
         st.rerun()
 
-    # Nomination buttons
     sorted_all = sorted(players, key=lambda p: p['number'])
     for p in sorted_all:
         if st.button(f"day_nom_{p['number']}", key=f"day_nom_{p['number']}"):
@@ -333,7 +359,6 @@ def screen_game_day():
                 st.session_state.game_log.append(f"День {day}: #{by_num} → #{p['number']}")
             st.rerun()
 
-    # Foul buttons
     for p in sorted_all:
         if st.button(f"day_foul_{p['number']}", key=f"day_foul_{p['number']}"):
             if p['status'] != 'dead' and p['fouls'] < 4:
@@ -357,11 +382,9 @@ def screen_game_day():
         st.session_state.show_roles = not st.session_state.get("show_roles", False)
         st.rerun()
 
-    # === Живой таймер ===
     if phase == "speaking" and not st.session_state.timer_paused and st.session_state.timer_start_time:
         _run_day_live()
 
-    # Прячем day_ кнопки
     components.html("""
     <script>
     (function() {
@@ -381,6 +404,192 @@ def screen_game_day():
     })();
     </script>
     """, height=0)
+
+
+def _build_bars_html(sorted_all, order_nums, speaker_idx, phase):
+    html = ""
+    for p in sorted_all:
+        foul_dots = "❗" * p['fouls'] if p['fouls'] > 0 else ""
+        name = f"#{p['number']} {p['nickname']}"
+
+        if p['status'] == 'dead':
+            html += (
+                f'<div class="bar bar-dead">'
+                f'<div class="bar-content"><span>{name} 💀</span>'
+                f'<span>{foul_dots}</span></div></div>'
+            )
+            continue
+
+        pos = order_nums.index(p['number']) if p['number'] in order_nums else 999
+
+        if pos < speaker_idx:
+            # Уже высказался
+            html += (
+                f'<div class="bar bar-done">'
+                f'<div class="bar-fill bar-fill-done"></div>'
+                f'<div class="bar-content"><span>✅ {name}</span>'
+                f'<span>{foul_dots}</span></div></div>'
+            )
+        elif pos == speaker_idx:
+            # Текущий оратор — анимация ТОЛЬКО если speaking
+            if phase == "speaking" and st.session_state.get("timer_start_time"):
+                elapsed = time.time() - st.session_state.timer_start_time
+                total = st.session_state.get("timer_duration", 60)
+                start_pct = min(100, int((elapsed / max(total, 1)) * 100))
+                fill_class = "bar-fill bar-fill-active"
+                style = f'--start-pct:{start_pct}%;'
+            elif phase == "speaking" and st.session_state.get("timer_paused"):
+                rem = st.session_state.get("timer_paused_remaining", 60)
+                paused_pct = min(100, int(((60 - rem) / 60) * 100))
+                fill_class = "bar-fill bar-fill-paused"
+                style = f'width:{paused_pct}%;'
+            else:
+                # idle — НЕТ анимации, НЕТ заполнения
+                fill_class = "bar-fill"
+                style = "width:0%;"
+            html += (
+                f'<div class="bar bar-speaking">'
+                f'<div class="{fill_class}" style="{style}"></div>'
+                f'<div class="bar-content"><span>🗣️ {name}</span>'
+                f'<span>{foul_dots}</span></div></div>'
+            )
+        else:
+            # Ожидает
+            html += (
+                f'<div class="bar bar-waiting">'
+                f'<div class="bar-content"><span>{name}</span>'
+                f'<span>{foul_dots}</span></div></div>'
+            )
+
+    return html
+
+
+def _build_nom_grid(sorted_all, day):
+    nominated_nums = list(st.session_state.get("nominees", {}).values())
+    html = ""
+    for p in sorted_all:
+        is_dead = p['status'] == 'dead'
+        is_nom = p['number'] in nominated_nums
+        if is_dead:
+            html += f'<button class="grid-btn dead" disabled>#{p["number"]}</button>'
+        elif is_nom:
+            html += f'<button class="grid-btn selected" onclick="clickDay(\'day_nom_{p["number"]}\')">🗳️#{p["number"]}</button>'
+        else:
+            html += f'<button class="grid-btn" onclick="clickDay(\'day_nom_{p["number"]}\')">#{p["number"]}</button>'
+    return html
+
+
+def _build_nom_summary(players):
+    nominees = st.session_state.get("nominees", {})
+    if not nominees:
+        return ""
+    grouped = {}
+    for by_n, who_n in nominees.items():
+        grouped.setdefault(who_n, []).append(by_n)
+    html = ""
+    for who_n, by_list in grouped.items():
+        who_p = next((x for x in players if x['number'] == who_n), None)
+        by_strs = []
+        for bn in by_list:
+            bp = next((x for x in players if x['number'] == bn), None)
+            by_strs.append(f"#{bp['number']}" if bp else f"#{bn}")
+        who_str = f"#{who_p['number']} {who_p['nickname']}" if who_p else f"#{who_n}"
+        html += f'<div class="nom-summary">🗳️ <b>{who_str}</b> ← {", ".join(by_strs)}</div>'
+    return html
+
+
+def _build_fouls_grid(sorted_all, day):
+    html = ""
+    for p in sorted_all:
+        is_dead = p['status'] == 'dead'
+        foul_dots = "❗" * p['fouls'] if p['fouls'] > 0 else ""
+        at_max = p['fouls'] >= 4
+        if is_dead:
+            html += f'<button class="grid-btn dead" disabled>#{p["number"]}</button>'
+        elif at_max:
+            html += f'<button class="grid-btn foul-max" disabled>🚫#{p["number"]}</button>'
+        else:
+            html += f'<button class="grid-btn foul-btn" onclick="clickDay(\'day_foul_{p["number"]}\')">{foul_dots}#{p["number"]}</button>'
+    return html
+
+
+def _calc_day_height(players, all_done, nominees):
+    n = len(players)
+    h = 440  # header + BIG timer + main btn + speaker
+    h += n * 44  # bars
+    h += 140  # nom grid + title
+    if nominees:
+        h += len(set(nominees.values())) * 44
+    h += 140  # fouls grid + title
+    if all_done:
+        h += 70
+    h += 60  # roles btn
+    h += 40  # padding
+    return h
+
+
+def _reset_day():
+    st.session_state.day_phase = "idle"
+    st.session_state.timer_start_time = None
+    st.session_state.timer_duration = 60
+    st.session_state.timer_paused = False
+    st.session_state.timer_paused_remaining = 60
+
+
+def _run_day_live():
+    start = st.session_state.timer_start_time
+    total = st.session_state.timer_duration
+    if not start:
+        return
+
+    while True:
+        elapsed = time.time() - start
+        sec = max(0, total - int(elapsed))
+
+        if sec > 10:
+            color = "#fff"
+        elif sec > 5:
+            color = "#ff8c00"
+        else:
+            color = "#ff2222"
+
+        components.html(f"""
+        <script>
+        (function() {{
+            var pd = window.parent.document;
+            var frames = pd.querySelectorAll('iframe');
+            for (var f of frames) {{
+                try {{
+                    var doc = f.contentDocument || f.contentWindow.document;
+                    var num = doc.getElementById('timerNum');
+                    if (num) {{
+                        num.textContent = '{sec}';
+                        num.style.color = '{color}';
+                        break;
+                    }}
+                }} catch(e) {{}}
+            }}
+        }})();
+        </script>
+        """, height=0)
+
+        if sec <= 10 and sec > 0:
+            play_sound_html(METRONOME_SOUND)
+        if sec == 0:
+            play_sound_html(WHISTLE_SOUND)
+            time.sleep(1.5)
+            break
+
+        time.sleep(1)
+
+
+def _get_remaining():
+    if st.session_state.get("timer_paused"):
+        return st.session_state.get("timer_paused_remaining", 60)
+    if st.session_state.get("timer_start_time") is None:
+        return st.session_state.get("timer_duration", 60)
+    elapsed = time.time() - st.session_state.timer_start_time
+    return max(0, st.session_state.timer_duration - int(elapsed))
 
 
 def _build_bars_html(sorted_all, order_nums, speaker_idx, phase):
