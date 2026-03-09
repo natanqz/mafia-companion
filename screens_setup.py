@@ -944,12 +944,9 @@ def screen_night_zero():
     phase = st.session_state.n0_phase
     notes = st.session_state.get('mafia_notes', '')
 
-    # Определяем состояние для HTML
     if phase == "idle":
         sec_display = 60
         progress_pct = 0
-        show_start = "true"
-        show_restart = "false"
         timer_color = "#4CAF50"
     elif phase == "running":
         if st.session_state.n0_timer_start:
@@ -958,23 +955,45 @@ def screen_night_zero():
         else:
             sec_display = st.session_state.n0_seconds
         progress_pct = min(100, int(((60 - sec_display) / 60) * 100))
-        show_start = "false"
-        show_restart = "true"
         if sec_display > 10:
             timer_color = "#4CAF50"
         elif sec_display > 5:
             timer_color = "#ff8c00"
         else:
             timer_color = "#ff2222"
-    else:  # done
+    elif phase == "paused":
+        sec_display = st.session_state.get("n0_paused_remaining", 60)
+        progress_pct = min(100, int(((60 - sec_display) / 60) * 100))
+        timer_color = "#ff8c00"
+    else:
         sec_display = 0
         progress_pct = 100
-        show_start = "false"
-        show_restart = "true"
         timer_color = "#ff2222"
 
-    # Кнопка утро: показываем когда idle или done
-    show_morning = "true" if phase != "running" else "false"
+    timer_done = phase == "done"
+    dash_offset = 628.32 * (1 - progress_pct / 100)
+
+    # Кнопка play/pause
+    if phase == "idle":
+        play_label = "▶️ Старт"
+        play_action = "clickN0('n0_Старт')"
+    elif phase == "running":
+        play_label = "⏸️ Пауза"
+        play_action = "clickN0('n0_Пауза')"
+    elif phase == "paused":
+        play_label = "▶️ Продолжить"
+        play_action = "clickN0('n0_Продолжить')"
+    else:
+        play_label = "▶️ Старт"
+        play_action = "clickN0('n0_Старт')"
+
+    # Утро: всегда кликабельна, но стиль меняется
+    if timer_done:
+        morning_bg = "background:linear-gradient(135deg,#e67e22,#d35400);color:#fff;"
+        morning_shadow = "box-shadow:0 0 20px rgba(230,126,34,0.5);"
+    else:
+        morning_bg = "background:#2a2a3a;color:#666;border:1px solid #444;"
+        morning_shadow = ""
 
     components.html(f"""
     <style>
@@ -982,31 +1001,23 @@ def screen_night_zero():
         body {{ background: transparent; font-family: -apple-system, sans-serif; }}
         .wrap {{
             display: flex; flex-direction: column; align-items: center;
-            padding: 16px 12px; gap: 12px;
+            padding: 14px 12px; gap: 10px;
         }}
-        .header-icon {{ font-size: 64px; }}
-        .header-title {{
-            font-size: 22px; font-weight: bold; color: #fff;
-            margin: 4px 0;
-        }}
-        .header-sub {{
-            font-size: 14px; color: #888;
-        }}
+        .header-icon {{ font-size: 56px; }}
+        .header-title {{ font-size: 22px; font-weight: bold; color: #fff; }}
+        .header-sub {{ font-size: 13px; color: #888; }}
 
-        /* Круговой таймер */
         .timer-wrap {{
             position: relative;
-            width: 220px; height: 220px;
-            margin: 8px 0;
+            width: 200px; height: 200px;
+            margin: 4px 0;
         }}
         .timer-svg {{
             transform: rotate(-90deg);
-            width: 220px; height: 220px;
+            width: 200px; height: 200px;
         }}
         .timer-bg {{
-            fill: none;
-            stroke: #333;
-            stroke-width: 6;
+            fill: none; stroke: #333; stroke-width: 6;
         }}
         .timer-progress {{
             fill: none;
@@ -1019,40 +1030,42 @@ def screen_night_zero():
             position: absolute;
             top: 50%; left: 50%;
             transform: translate(-50%, -50%);
-            font-size: 72px;
+            font-size: 64px;
             font-weight: bold;
             color: {timer_color};
             line-height: 1;
         }}
 
-        /* Кнопки */
         .btn-row {{
             display: flex; gap: 8px; width: 100%;
         }}
         .btn {{
-            flex: 1; height: 52px; border-radius: 12px;
-            font-size: 16px; font-weight: bold; cursor: pointer;
+            flex: 1; height: 48px; border-radius: 12px;
+            font-size: 15px; font-weight: bold; cursor: pointer;
             border: none; transition: transform 0.12s;
+            display: flex; align-items: center; justify-content: center;
         }}
         .btn:active {{ transform: scale(0.95); }}
         .btn:hover {{ filter: brightness(1.15); }}
-        .btn-start {{
-            background: linear-gradient(135deg, #27ae60, #219a52);
-            color: #fff;
-        }}
         .btn-restart {{
             background: #262730; color: #ccc; border: 1px solid #555;
         }}
+        .btn-play {{
+            background: linear-gradient(135deg, #27ae60, #219a52);
+            color: #fff;
+        }}
+
         .btn-morning {{
             width: 100%; height: 56px; border-radius: 14px;
-            background: linear-gradient(135deg, #e67e22, #d35400);
-            color: #fff; font-size: 18px; font-weight: bold;
-            border: none; cursor: pointer; transition: transform 0.12s;
+            {morning_bg}
+            {morning_shadow}
+            font-size: 18px; font-weight: bold;
+            border: none; cursor: pointer;
+            transition: all 0.3s;
         }}
         .btn-morning:active {{ transform: scale(0.95); }}
         .btn-morning:hover {{ filter: brightness(1.15); }}
 
-        /* Заметка */
         .notes-wrap {{
             width: 100%;
             background: #1a1a2e;
@@ -1071,7 +1084,7 @@ def screen_night_zero():
         }}
         .notes-area:focus {{ border-color: #4CAF50; }}
 
-        .divider {{ border-top: 1px solid #333; width: 100%; margin: 4px 0; }}
+        .divider {{ border-top: 1px solid #333; width: 100%; margin: 2px 0; }}
     </style>
     <div class="wrap">
         <div class="header-icon">🌙</div>
@@ -1079,25 +1092,25 @@ def screen_night_zero():
         <div class="header-sub">Мафия знакомится друг с другом</div>
 
         <div class="timer-wrap">
-            <svg class="timer-svg" viewBox="0 0 220 220">
-                <circle class="timer-bg" cx="110" cy="110" r="100"/>
+            <svg class="timer-svg" viewBox="0 0 200 200">
+                <circle class="timer-bg" cx="100" cy="100" r="90"/>
                 <circle class="timer-progress" id="progressCircle"
-                    cx="110" cy="110" r="100"
-                    stroke-dasharray="628.32"
-                    stroke-dashoffset="{628.32 * (1 - progress_pct / 100)}"
+                    cx="100" cy="100" r="90"
+                    stroke-dasharray="565.49"
+                    stroke-dashoffset="{565.49 * (1 - progress_pct / 100)}"
                 />
             </svg>
             <div class="timer-text" id="timerText">{sec_display}</div>
         </div>
 
         <div class="btn-row">
-            <button class="btn btn-start" id="btnStart"
-                style="display:{('flex' if phase == 'idle' else 'none')}"
-                onclick="clickN0('n0_Старт')">▶️ Старт</button>
-            <button class="btn btn-restart" id="btnRestart"
-                style="display:{('flex' if phase != 'idle' else 'none')}"
-                onclick="clickN0('n0_Рестарт')">🔄 Рестарт</button>
+            <button class="btn btn-restart" onclick="clickN0('n0_Заново')">🔄 Заново</button>
+            <button class="btn btn-play" onclick="{play_action}">{play_label}</button>
         </div>
+
+        <button class="btn-morning" id="btnMorning" onclick="doMorning()">
+            ☀️ Наступает Утро 1
+        </button>
 
         <div class="divider"></div>
 
@@ -1107,12 +1120,6 @@ def screen_night_zero():
                 placeholder="Очерёдность стрельбы..."
                 oninput="saveNotes()">{notes}</textarea>
         </div>
-
-        <div class="divider"></div>
-
-        <button class="btn-morning" id="btnMorning"
-            style="display:{('block' if phase != 'running' else 'none')}"
-            onclick="doMorning()">☀️ Наступает Утро 1</button>
     </div>
     <script>
     function clickN0(text) {{
@@ -1126,20 +1133,18 @@ def screen_night_zero():
             }}
         }}
     }}
-
     function saveNotes() {{
         const val = document.getElementById('notesArea').value;
         const url = new URL(window.parent.location);
         url.searchParams.set('n0_notes', val);
         window.parent.history.replaceState(null, '', url);
     }}
-
     function doMorning() {{
         saveNotes();
         clickN0('n0_Утро');
     }}
     </script>
-    """, height=680)
+    """, height=700)
 
     # === Скрытые ST-кнопки ===
     if st.button("n0_Старт", key="n0_start_btn"):
@@ -1148,18 +1153,33 @@ def screen_night_zero():
         st.session_state.n0_seconds = 60
         st.rerun()
 
-    if st.button("n0_Рестарт", key="n0_restart_btn"):
+    if st.button("n0_Пауза", key="n0_pause_btn"):
+        if st.session_state.n0_timer_start:
+            elapsed = time.time() - st.session_state.n0_timer_start
+            remaining = max(0, st.session_state.n0_seconds - int(elapsed))
+        else:
+            remaining = st.session_state.n0_seconds
+        st.session_state.n0_phase = "paused"
+        st.session_state.n0_paused_remaining = remaining
+        st.session_state.n0_timer_start = None
+        st.rerun()
+
+    if st.button("n0_Продолжить", key="n0_resume_btn"):
+        st.session_state.n0_phase = "running"
+        st.session_state.n0_timer_start = time.time()
+        st.session_state.n0_seconds = st.session_state.get("n0_paused_remaining", 60)
+        st.rerun()
+
+    if st.button("n0_Заново", key="n0_restart_btn"):
         st.session_state.n0_phase = "running"
         st.session_state.n0_timer_start = time.time()
         st.session_state.n0_seconds = 60
         st.rerun()
 
     if st.button("n0_Утро", key="n0_morning_btn"):
-        # Сохраняем заметки
         params = st.query_params
         notes_val = params.get("n0_notes", st.session_state.get('mafia_notes', ''))
         st.session_state.mafia_notes = notes_val
-        # Переход
         st.session_state.day_number = 1
         st.session_state.current_speaker = 0
         st.session_state.nominees = {}
@@ -1192,6 +1212,66 @@ def screen_night_zero():
     })();
     </script>
     """, height=0)
+
+
+def _run_n0_live():
+    start = st.session_state.n0_timer_start
+    total = st.session_state.n0_seconds
+    if not start:
+        return
+
+    while True:
+        elapsed = time.time() - start
+        sec = max(0, total - int(elapsed))
+        progress_pct = min(100, int(((total - sec) / max(total, 1)) * 100))
+        dash_offset = 565.49 * (1 - progress_pct / 100)
+
+        if sec > 10:
+            color = "#4CAF50"
+        elif sec > 5:
+            color = "#ff8c00"
+        else:
+            color = "#ff2222"
+
+        components.html(f"""
+        <script>
+        (function() {{
+            var pd = window.parent.document;
+            var frames = pd.querySelectorAll('iframe');
+            for (var f of frames) {{
+                try {{
+                    var doc = f.contentDocument || f.contentWindow.document;
+                    var circle = doc.getElementById('progressCircle');
+                    var text = doc.getElementById('timerText');
+                    var btn = doc.getElementById('btnMorning');
+                    if (circle && text) {{
+                        circle.style.strokeDashoffset = '{dash_offset}';
+                        circle.style.stroke = '{color}';
+                        text.style.color = '{color}';
+                        text.textContent = '{sec}';
+                    }}
+                    if (btn && {sec} === 0) {{
+                        btn.style.background = 'linear-gradient(135deg,#e67e22,#d35400)';
+                        btn.style.color = '#fff';
+                        btn.style.boxShadow = '0 0 20px rgba(230,126,34,0.5)';
+                        btn.style.border = 'none';
+                    }}
+                }} catch(e) {{}}
+            }}
+        }})();
+        </script>
+        """, height=0)
+
+        if sec <= 10 and sec > 0:
+            play_sound_html(METRONOME_SOUND)
+        if sec == 0:
+            play_sound_html(WHISTLE_SOUND)
+            st.session_state.n0_phase = "done"
+            st.session_state.n0_timer_start = None
+            st.rerun()
+            break
+
+        time.sleep(1)
 
 
 def _run_n0_live():
