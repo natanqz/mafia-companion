@@ -15,6 +15,14 @@ import streamlit.components.v1 as components
 def screen_main_menu():
     import streamlit.components.v1 as components
 
+    # Прячем нативные кнопки через CSS
+    st.markdown("""
+    <style>
+    .hidden-buttons { display: none !important; }
+    .hidden-buttons * { display: none !important; }
+    </style>
+    """, unsafe_allow_html=True)
+
     # HTML главный экран
     components.html("""
     <style>
@@ -76,63 +84,72 @@ def screen_main_menu():
     <div class="menu-wrap">
         <div class="logo">🎭</div>
         <div class="title">Mafia Companion</div>
-        <button class="btn-big" onclick="click_st('main_new')">
+        <button class="btn-big" onclick="clickBtn('_new')">
             <span class="icon">🕹️</span>
             <span class="label">Новая игра</span>
         </button>
         <div class="row">
-            <button class="btn-sm" onclick="click_st('main_players')">
+            <button class="btn-sm" onclick="clickBtn('_players')">
                 <span class="icon">👥</span>
                 <span class="label">Игроки</span>
             </button>
-            <button class="btn-sm" onclick="click_st('main_archive')">
+            <button class="btn-sm" onclick="clickBtn('_archive')">
                 <span class="icon">📦</span>
                 <span class="label">Архив</span>
             </button>
-            <button class="btn-sm" onclick="click_st('main_export')">
+            <button class="btn-sm" onclick="clickBtn('_export')">
                 <span class="icon">📤</span>
                 <span class="label">Экспорт</span>
             </button>
         </div>
     </div>
     <script>
-    function click_st(key) {
-        const btns = window.parent.document.querySelectorAll('button[kind="secondary"]');
-        for (const b of btns) {
-            if (b.innerText.includes(key.replace('main_',''))) {
+    function clickBtn(suffix) {
+        const doc = window.parent.document;
+        const buttons = doc.querySelectorAll('button');
+        for (let b of buttons) {
+            const id = b.id || '';
+            const testid = b.getAttribute('data-testid') || '';
+            const text = b.textContent || '';
+            const key = b.closest('[id]')?.id || '';
+            if (key.includes(suffix) || id.includes(suffix)) {
                 b.click();
                 return;
             }
         }
-        // fallback: ищем по data-testid
-        const all = window.parent.document.querySelectorAll('[data-testid="baseButton-secondary"]');
-        all.forEach(b => {
-            const txt = b.textContent.toLowerCase();
-            if (key === 'main_new' && txt.includes('новая')) b.click();
-            if (key === 'main_players' && txt.includes('игрок')) b.click();
-            if (key === 'main_archive' && txt.includes('архив')) b.click();
-            if (key === 'main_export' && txt.includes('экспорт')) b.click();
-        });
+        // fallback: по тексту
+        const map = {
+            '_new': '🕹️',
+            '_players': '👥',
+            '_archive': '📦',
+            '_export': '📤'
+        };
+        const emoji = map[suffix];
+        for (let b of buttons) {
+            if (b.textContent.includes(emoji)) {
+                b.click();
+                return;
+            }
+        }
     }
     </script>
     """, height=420)
 
-    # Скрытые Streamlit-кнопки для обработки логики
-    st.markdown('<div style="position:absolute;left:-9999px;opacity:0;pointer-events:none;">', unsafe_allow_html=True)
-    if st.button("Новая", key="main_new"):
+    # Скрытые Streamlit-кнопки
+    st.markdown('<div class="hidden-buttons">', unsafe_allow_html=True)
+    if st.button("🕹️ Новая", key="main_new"):
         go("select_mode")
         st.rerun()
-    if st.button("Игроки", key="main_players"):
+    if st.button("👥 Игроки", key="main_players"):
         go("manage_players")
         st.rerun()
-    if st.button("Архив", key="main_archive"):
+    if st.button("📦 Архив", key="main_archive"):
         go("archive")
         st.rerun()
-    if st.button("Экспорт", key="main_export"):
+    if st.button("📤 Экспорт", key="main_export"):
         go("export")
         st.rerun()
     st.markdown('</div>', unsafe_allow_html=True)
-
 def screen_select_mode():
     st.markdown(
         '<div style="text-align:center;padding:40px 0 10px;">'
