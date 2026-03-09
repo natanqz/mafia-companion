@@ -26,21 +26,16 @@ def screen_main_menu():
     st.markdown('</div>', unsafe_allow_html=True)
 
     st.markdown('<div class="small-btn">', unsafe_allow_html=True)
-    c1, c2, c3 = st.columns(3)
-    with c1:
-        if st.button("👥 Игроки", use_container_width=True, key="main_players"):
-            go("manage_players")
-            st.rerun()
-    with c2:
-        if st.button("📦 Архив", use_container_width=True, key="main_archive"):
-            go("archive")
-            st.rerun()
-    with c3:
-        if st.button("📤 Экспорт", use_container_width=True, key="main_export"):
-            go("export")
-            st.rerun()
+    if st.button("👥 Игроки", use_container_width=True, key="main_players"):
+        go("manage_players")
+        st.rerun()
+    if st.button("📦 Архив", use_container_width=True, key="main_archive"):
+        go("archive")
+        st.rerun()
+    if st.button("📤 Экспорт", use_container_width=True, key="main_export"):
+        go("export")
+        st.rerun()
     st.markdown('</div>', unsafe_allow_html=True)
-
 
 def screen_select_mode():
     st.markdown(
