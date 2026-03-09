@@ -90,6 +90,8 @@ def screen_select_players():
         else:
             st.button("Минимум 7", use_container_width=True, disabled=True, key="players_next_d")
 
+
+
     st.markdown("---")
     sorted_players = sorted(db['players'], key=lambda p: get_play_count(db, p['id']), reverse=True)
     cols_count = 3
