@@ -76,11 +76,19 @@ def screen_select_players():
     can_go = count >= 7
 
     st.markdown(
-        f'<div style="background:#2a2a4a;padding:10px 12px;border-radius:8px;'
+        f'<div id="info-bar" style="background:#2a2a4a;padding:10px 12px;border-radius:8px;'
         f'font-size:18px;text-align:center;color:#aaa;">'
-        f'Выбрано: <b style="color:white;font-size:24px;margin-left:8px;">{count}</b></div>',
+        f'Выбрано: <b style="color:white;font-size:24px;margin-left:8px;">{count}</b>'
+        f'<span id="screen-size" style="margin-left:20px;color:#0f0;font-size:12px;"></span>'
+        f'</div>'
+        f'<script>'
+        f'(function(){{ var el=document.getElementById("screen-size");'
+        f'if(el) el.textContent="["+window.innerWidth+"x"+window.innerHeight+"]";'
+        f'}})();'
+        f'</script>',
         unsafe_allow_html=True
     )
+
     if can_go:
         if st.button(f"✅ Далее ({count})", use_container_width=True, key="players_next"):
             _finalize_players(db)
@@ -428,25 +436,7 @@ def screen_players_list():
         '<p style="font-size:22px;font-weight:bold;color:#fff;">База игроков</p></div>',
         unsafe_allow_html=True
     )
-    # Счётчик размера окна для отладки
-    components.html("""
-        <div id="size-display" style="
-            position:fixed; top:5px; left:5px; z-index:9999;
-            background:rgba(0,0,0,0.8); color:#0f0; padding:4px 10px;
-            border-radius:4px; font-size:14px; font-family:monospace;
-        "></div>
-        <script>
-        function updateSize() {
-            const w = window.parent.innerWidth;
-            const h = window.parent.innerHeight;
-            const el = document.getElementById('size-display');
-            if (el) el.textContent = w + ' x ' + h;
-        }
-        updateSize();
-        window.parent.addEventListener('resize', updateSize);
-        setInterval(updateSize, 1000);
-        </script>
-    """, height=0)
+
     with st.form("add_player"):
         c1, c2 = st.columns(2)
         rn = c1.text_input("Реальное имя"); nn = c2.text_input("Псевдоним")
