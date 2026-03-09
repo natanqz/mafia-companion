@@ -192,22 +192,25 @@ def screen_assign_roles():
             # Ролевой — вправо
             emoji = role_emoji(p['role'])
             bg = "#2a1a1a" if p['role'] in ['Дон', 'Мафия'] else "#1a2a3d"
-            cancel_col1, cancel_col2 = st.columns([6, 1])
-            with cancel_col1:
+            if not all_done:
                 st.markdown(
                     f'<div style="background:{bg};padding:8px 14px;margin:3px 0;'
                     f'border-radius:6px;color:white;font-size:15px;text-align:right;">'
                     f'#{p["number"]} {p["nickname"]} — {emoji} {p["role"]}</div>',
                     unsafe_allow_html=True)
-            with cancel_col2:
-                if not all_done:
-                    if st.button("✖", key=f"cancel_{p['number']}"):
-                        p['role'] = ""
-                        ma = st.session_state.get('manual_assigned', {})
-                        for k in [k for k, v in ma.items() if v == p['number']]: del ma[k]
-                        st.session_state.manual_assigned = ma
-                        _recalc_peaceful(players, roles)
-                        st.rerun()
+                if st.button(f"✖ Снять роль #{p['number']}", key=f"cancel_{p['number']}", use_container_width=True):
+                    p['role'] = ""
+                    ma = st.session_state.get('manual_assigned', {})
+                    for k in [k for k, v in ma.items() if v == p['number']]: del ma[k]
+                    st.session_state.manual_assigned = ma
+                    _recalc_peaceful(players, roles)
+                    st.rerun()
+            else:
+                st.markdown(
+                    f'<div style="background:{bg};padding:8px 14px;margin:3px 0;'
+                    f'border-radius:6px;color:white;font-size:15px;text-align:right;">'
+                    f'#{p["number"]} {p["nickname"]} — {emoji} {p["role"]}</div>',
+                    unsafe_allow_html=True)
         else:
             # Не назначен — по центру
             st.markdown(
