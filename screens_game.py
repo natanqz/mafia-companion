@@ -174,7 +174,7 @@ def screen_game_day():
 
         .bar {{
             height:44px; display:flex; align-items:center;
-            padding:4px 12px; margin:2px 0; border-radius:6px;
+            padding:0 8px; margin:2px 0; border-radius:6px;
             font-size:18px; font-weight:bold; position:relative;
             overflow:hidden; color:#fff;
         }}
@@ -185,8 +185,17 @@ def screen_game_day():
         }}
         .bar-content {{
             position:relative; z-index:1; width:100%;
-            display:flex; justify-content:space-between; align-items:center;
+            display:grid;
+            grid-template-columns: 28px 44px 28px 1fr auto;
+            align-items:center;
+            gap:4px;
         }}
+        .bar-col-status {{ text-align:center; font-size:16px; }}
+        .bar-col-num {{ text-align:center; color:#ccc; }}
+        .bar-col-emoji {{ text-align:center; font-size:16px; }}
+        .bar-col-nick {{ text-align:left; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }}
+        .bar-col-role {{ text-align:right; font-size:13px; color:#888; font-weight:normal; padding-right:4px; }}
+        .bar-col-fouls {{ text-align:right; min-width:20px; }}
         .bar-dead {{ background:#111; color:#555; }}
         .bar-dead .bar-content {{ text-decoration:line-through; }}
         .bar-waiting {{ background:#1a1a3d; }}
@@ -381,54 +390,66 @@ def _build_bars_html(sorted_all, order_nums, speaker_idx, phase, remaining, fmt_
     html = ""
     for p in sorted_all:
         foul_dots = "❗" * p['fouls'] if p['fouls'] > 0 else ""
-        name = fmt_full(p)
+        num_str = f"-{p['number']}-"
+        nick = p['nickname']
+        emoji = role_emoji(p['role']) if show_roles and p.get('role') else ""
+        role_word = f"({p['role']})" if show_roles and p.get('role') else ""
 
         if p['status'] == 'dead':
             html += (
                 f'<div class="bar bar-dead">'
-                f'<div class="bar-content"><span>{name} 💀</span>'
-                f'<span>{foul_dots}</span></div></div>'
+                f'<div class="bar-content" style="opacity:0.5;text-decoration:line-through;">'
+                f'<span class="bar-col-status">💀</span>'
+                f'<span class="bar-col-num">{num_str}</span>'
+                f'<span class="bar-col-emoji">{emoji}</span>'
+                f'<span class="bar-col-nick">{nick}</span>'
+                f'<span class="bar-col-role">{role_word}</span>'
+                f'</div></div>'
             )
             continue
 
         pos = order_nums.index(p['number']) if p['number'] in order_nums else 999
 
         if pos < speaker_idx:
-            html += (
-                f'<div class="bar bar-done">'
-                f'<div class="bar-fill" style="width:100%;background:rgba(76,175,80,0.2);"></div>'
-                f'<div class="bar-content"><span>✅ {name}</span>'
-                f'<span>{foul_dots}</span></div></div>'
-            )
+            status_icon = "✅"
+            bar_class = "bar-done"
+            fill_html = '<div class="bar-fill" style="width:100%;background:rgba(76,175,80,0.2);"></div>'
         elif pos == speaker_idx:
-            if phase == "speaking" and st.session_state.get("timer_start_time"):
-                elapsed = time.time() - st.session_state.timer_start_time
-                total = st.session_state.get("timer_duration", 60)
-                current_pct = min(100, int((elapsed / max(total, 1)) * 100))
-                fill_style = f"width:{current_pct}%;background:rgba(76,175,80,0.5);"
-            elif phase == "speaking" and st.session_state.get("timer_paused"):
-                rem = st.session_state.get("timer_paused_remaining", 60)
-                paused_pct = min(100, int(((60 - rem) / 60) * 100))
-                fill_style = f"width:{paused_pct}%;background:rgba(255,165,0,0.4);"
+            bar_class = "bar-speaking"
+            if phase == "speaking":
+                status_icon = "🗣️"
+                if st.session_state.get("timer_start_time"):
+                    elapsed = time.time() - st.session_state.timer_start_time
+                    total = st.session_state.get("timer_duration", 60)
+                    current_pct = min(100, int((elapsed / max(total, 1)) * 100))
+                    fill_html = f'<div class="bar-fill" id="speakerFill" style="width:{current_pct}%;background:rgba(76,175,80,0.5);"></div>'
+                elif st.session_state.get("timer_paused"):
+                    rem = st.session_state.get("timer_paused_remaining", 60)
+                    paused_pct = min(100, int(((60 - rem) / 60) * 100))
+                    fill_html = f'<div class="bar-fill" id="speakerFill" style="width:{paused_pct}%;background:rgba(255,165,0,0.4);"></div>'
+                else:
+                    fill_html = '<div class="bar-fill" id="speakerFill" style="width:0%;background:rgba(76,175,80,0.5);"></div>'
             else:
-                fill_style = "width:0%;background:rgba(76,175,80,0.5);"
-
-            icon = "🗣️" if phase == "speaking" else "➡️"
-            html += (
-                f'<div class="bar bar-speaking">'
-                f'<div class="bar-fill" id="speakerFill" style="{fill_style}"></div>'
-                f'<div class="bar-content"><span>{icon} {name}</span>'
-                f'<span>{foul_dots}</span></div></div>'
-            )
+                status_icon = "➡️"
+                fill_html = '<div class="bar-fill" id="speakerFill" style="width:0%;background:rgba(76,175,80,0.5);"></div>'
         else:
-            html += (
-                f'<div class="bar bar-waiting">'
-                f'<div class="bar-content"><span>{name}</span>'
-                f'<span>{foul_dots}</span></div></div>'
-            )
+            status_icon = ""
+            bar_class = "bar-waiting"
+            fill_html = ""
+
+        html += (
+            f'<div class="bar {bar_class}">'
+            f'{fill_html}'
+            f'<div class="bar-content">'
+            f'<span class="bar-col-status">{status_icon}</span>'
+            f'<span class="bar-col-num">{num_str}</span>'
+            f'<span class="bar-col-emoji">{emoji}</span>'
+            f'<span class="bar-col-nick">{nick}</span>'
+            f'<span class="bar-col-role">{role_word} {foul_dots}</span>'
+            f'</div></div>'
+        )
 
     return html
-
 
 def _build_nom_grid(sorted_all, day, fmt_grid):
     nominated_nums = list(st.session_state.get("nominees", {}).values())
