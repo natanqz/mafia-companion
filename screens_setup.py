@@ -77,19 +77,21 @@ def screen_select_players():
     col_cnt, col_next = st.columns([1, 2])
     with col_cnt:
         st.markdown(
-            f'<div style="background:#2a2a4a;padding:10px 12px;border-radius:8px;'
-            f'font-size:14px;text-align:center;color:#aaa;'
-            f'height:40px;display:flex;align-items:center;justify-content:center;">'
-            f'Выбрано: <b style="color:white;font-size:18px;margin-left:6px;">{count}</b></div>',
+            f'<div style="background:#2a2a4a;padding:8px 12px;border-radius:8px;'
+            f'font-size:14px;text-align:center;color:#aaa;margin-top:4px;">'
+            f'Выбрано: <b style="color:white;font-size:18px;">{count}</b></div>',
             unsafe_allow_html=True
         )
     with col_next:
         if can_go:
-            if st.button(f"✅ Далее ({count})", use_container_width=True, key="players_next"):
-                _finalize_players(db); st.rerun()
+            st.markdown('<style>.go-btn button {height:50px !important;font-size:18px !important;}</style>', unsafe_allow_html=True)
+            with st.container():
+                st.markdown('<div class="go-btn">', unsafe_allow_html=True)
+                if st.button(f"✅ Далее ({count})", use_container_width=True, key="players_next"):
+                    _finalize_players(db); st.rerun()
+                st.markdown('</div>', unsafe_allow_html=True)
         else:
             st.button("Минимум 7", use_container_width=True, disabled=True, key="players_next_d")
-
 
 
     st.markdown("---")
