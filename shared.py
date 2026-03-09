@@ -17,17 +17,23 @@ WHISTLE_SOUND = "whistle.mp3"
 def inject_styles():
     st.markdown("""
     <style>
-    /* Запрещаем колонкам стекаться в 1 столбец */
+    /* Скролл только на уровне страницы */
+    html, body, [data-testid="stAppViewContainer"] {
+        overflow-x: auto !important;
+    }
+
+    /* Колонки не стекаются, без скролла на каждой строке */
     [data-testid="stHorizontalBlock"] {
         flex-wrap: nowrap !important;
         flex-direction: row !important;
         gap: 4px !important;
-        overflow-x: auto !important;
+        overflow: visible !important;
     }
     [data-testid="column"] {
         min-width: 0 !important;
         flex: 1 1 0% !important;
         width: auto !important;
+        overflow: visible !important;
     }
 
     /* Фиксированный размер кнопок */
