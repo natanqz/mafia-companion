@@ -3,7 +3,6 @@ import uuid
 import math
 import random
 import time
-from st_click_detector import click_detector
 from collections import Counter
 from shared import (
     load_db, save_db, get_player, get_play_count, go,
@@ -57,8 +56,6 @@ def screen_select_mode():
         go("main_menu"); st.rerun()
 
 
-
-
 def screen_select_players():
     db = load_db()
     st.markdown(
@@ -71,7 +68,8 @@ def screen_select_players():
         st.session_state.selected_pids = []
     if db.get('last_composition'):
         if st.button("🔄 Повторить прошлый состав", use_container_width=True):
-            st.session_state.selected_pids = db['last_composition'][:]; st.rerun()
+            st.session_state.selected_pids = db['last_composition'][:];
+            st.rerun()
     st.markdown("---")
     count = len(st.session_state.selected_pids)
     can_go = count >= 7
@@ -84,7 +82,8 @@ def screen_select_players():
     )
     if can_go:
         if st.button(f"✅ Далее ({count})", use_container_width=True, key="players_next"):
-            _finalize_players(db); st.rerun()
+            _finalize_players(db);
+            st.rerun()
     else:
         st.button("Минимум 7", use_container_width=True, disabled=True, key="players_next_d")
 
@@ -92,36 +91,71 @@ def screen_select_players():
 
     sorted_players = sorted(db['players'], key=lambda p: get_play_count(db, p['id']), reverse=True)
 
-    # HTML-сетка 2 колонки
-    html = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;padding:4px;">'
-    for p in sorted_players:
+    # Маркер начала сетки игроков
+    st.markdown('<div id="player-grid-start"></div>', unsafe_allow_html=True)
+
+    for idx, p in enumerate(sorted_players):
         is_sel = p['id'] in st.session_state.selected_pids
-        if is_sel:
-            bg = "#2e7d32"
-            border = "2px solid #4CAF50"
-            check = "✅ "
-        else:
-            bg = "#1a1a3d"
-            border = "2px solid #444"
-            check = ""
-        html += (
-            f'<a href="#" id="{p["id"]}" style="'
-            f'display:flex;align-items:center;justify-content:center;'
-            f'background:{bg};color:white;border:{border};border-radius:8px;'
-            f'padding:10px 4px;font-size:15px;font-weight:bold;'
-            f'text-decoration:none;min-height:44px;text-align:center;'
-            f'">{check}{p["nickname"]}</a>'
-        )
-    html += '</div>'
+        label = f"✅ {p['nickname']}" if is_sel else f"{p['nickname']}"
+        if st.button(label, key=f"sel_p_{idx}", use_container_width=True):
+            if is_sel:
+                st.session_state.selected_pids.remove(p['id'])
+            else:
+                st.session_state.selected_pids.append(p['id'])
+            st.rerun()
 
-    clicked = click_detector(html, key="player_grid")
+    # Маркер конца сетки
+    st.markdown('<div id="player-grid-end"></div>', unsafe_allow_html=True)
 
-    if clicked and clicked != "":
-        if clicked in st.session_state.selected_pids:
-            st.session_state.selected_pids.remove(clicked)
-        else:
-            st.session_state.selected_pids.append(clicked)
-        st.rerun()
+    # JS: превращаем кнопки между маркерами в 2-колоночную сетку
+    components.html("""
+    <script>
+    function makeGrid() {
+        const doc = window.parent.document;
+        const start = doc.getElementById('player-grid-start');
+        const end = doc.getElementById('player-grid-end');
+        if (!start || !end) return;
+
+        // Найти все элементы между маркерами
+        let el = start.closest('[data-testid="stVerticalBlock"]') || start.parentElement;
+        if (!el) return;
+
+        // Находим кнопки между start и end
+        const allButtons = [];
+        let collecting = false;
+        const children = el.parentElement ? el.parentElement.children : [];
+
+        for (let i = 0; i < children.length; i++) {
+            const child = children[i];
+            if (child.querySelector('#player-grid-start')) { collecting = true; continue; }
+            if (child.querySelector('#player-grid-end')) { collecting = false; break; }
+            if (collecting && child.querySelector('button')) {
+                allButtons.push(child);
+            }
+        }
+
+        if (allButtons.length < 2) return;
+
+        // Оборачиваем в grid-контейнер
+        const wrapper = doc.createElement('div');
+        wrapper.style.display = 'grid';
+        wrapper.style.gridTemplateColumns = '1fr 1fr';
+        wrapper.style.gap = '4px';
+        wrapper.id = 'player-grid-wrapper';
+
+        if (doc.getElementById('player-grid-wrapper')) return; // уже сделано
+
+        allButtons[0].parentElement.insertBefore(wrapper, allButtons[0]);
+        allButtons.forEach(btn => wrapper.appendChild(btn));
+    }
+
+    setTimeout(makeGrid, 500);
+    setTimeout(makeGrid, 1500);
+    setTimeout(makeGrid, 3000);
+    new MutationObserver(() => setTimeout(makeGrid, 300))
+        .observe(window.parent.document.body, {childList: true, subtree: true});
+    </script>
+    """, height=0)
 
     st.markdown("---")
     with st.expander("➕ Добавить нового игрока"):
@@ -132,10 +166,13 @@ def screen_select_players():
             if rn and nn:
                 pid = str(uuid.uuid4())
                 db['players'].append({"id": pid, "real_name": rn.strip(), "nickname": nn.strip(), "history": []})
-                save_db(db); st.success(f"✅ {rn} ({nn})"); st.rerun()
+                save_db(db);
+                st.success(f"✅ {rn} ({nn})");
+                st.rerun()
     st.markdown("---")
     if st.button("⬅️ Назад", use_container_width=True, key="players_back"):
-        go("select_mode"); st.rerun()
+        go("select_mode");
+        st.rerun()
 
 
 def _finalize_players(db):
