@@ -17,77 +17,18 @@ WHISTLE_SOUND = "whistle.mp3"
 def inject_styles():
     st.markdown("""
     <style>
-    html, body, [data-testid="stAppViewContainer"] {
-        overflow-x: auto !important;
-    }
-    [data-testid="stHorizontalBlock"] {
-        flex-wrap: nowrap !important;
-        flex-direction: row !important;
-        gap: 4px !important;
-        overflow: visible !important;
-    }
-    [data-testid="column"] {
-        min-width: 0 !important;
-        flex: 1 1 0% !important;
-        width: auto !important;
-        overflow: visible !important;
-    }
-
     /* Дефолтная кнопка */
     div.stButton > button {
         height: 38px !important;
         min-height: 38px !important;
-        max-height: 38px !important;
         font-size: 14px !important;
         font-weight: bold !important;
-        border-radius: 6px !important;
-        margin: 1px !important;
-        padding: 2px 4px !important;
+        border-radius: 8px !important;
+        padding: 2px 8px !important;
         white-space: nowrap !important;
         overflow: hidden !important;
     }
 
-    /* Большая кнопка */
-    .big-btn div.stButton > button,
-    .big-btn .stButton > button,
-    .big-btn button {
-        height: 70px !important;
-        min-height: 70px !important;
-        max-height: 70px !important;
-        font-size: 24px !important;
-        padding: 8px 16px !important;
-    }
-
-    /* Маленькая кнопка */
-    .small-btn div.stButton > button,
-    .small-btn .stButton > button,
-    .small-btn button {
-        height: 30px !important;
-        min-height: 30px !important;
-        max-height: 30px !important;
-        font-size: 12px !important;
-        padding: 0 4px !important;
-    }
-    /* Квадратная кнопка */
-    .square-btn div.stButton,
-    .square-btn .stButton {
-        display: flex !important;
-        justify-content: center !important;
-    }
-    .square-btn div.stButton > button,
-    .square-btn .stButton > button,
-    .square-btn button {
-        width: 120px !important;
-        min-width: 120px !important;
-        max-width: 120px !important;
-        height: 120px !important;
-        min-height: 120px !important;
-        max-height: 120px !important;
-        font-size: 20px !important;
-        padding: 4px !important;
-        line-height: 1.2 !important;
-        border-radius: 16px !important;
-    }
     .big-timer {
         font-size: 96px;
         text-align: center;
@@ -95,7 +36,6 @@ def inject_styles():
         margin: 0;
         padding: 10px;
     }
-
     .fullscreen-msg {
         width: 100%;
         padding: 60px 20px;
