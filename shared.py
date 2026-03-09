@@ -94,6 +94,23 @@ def inject_styles():
     .fs-civil {{ background: #cc0000; color: #fff; }}
     .fs-sheriff-found {{ background: #00aa00; color: #fff; }}
     .fs-civil-for-don {{ background: #cc0000; color: #fff; }}
+
+    /* Горизонтальные колонки на мобильном */
+    @media (max-width: 640px) {{
+        [data-testid="stHorizontalBlock"] {{
+            flex-wrap: nowrap !important;
+        }}
+        [data-testid="column"] {{
+            width: auto !important;
+            flex: 1 1 0 !important;
+            min-width: 0 !important;
+        }}
+        [data-testid="column"] button {{
+            padding: 0.3rem 0.1rem !important;
+            font-size: 0.75rem !important;
+            min-height: 2rem !important;
+        }}
+    }}
     </style>
 
     <script>
