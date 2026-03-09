@@ -3,6 +3,7 @@ import uuid
 import math
 import random
 import time
+from st_click_detector import click_detector
 from collections import Counter
 from shared import (
     load_db, save_db, get_player, get_play_count, go,
@@ -90,21 +91,37 @@ def screen_select_players():
     st.markdown("---")
 
     sorted_players = sorted(db['players'], key=lambda p: get_play_count(db, p['id']), reverse=True)
-    cols_count = 2
-    rows = math.ceil(len(sorted_players) / cols_count)
-    for r in range(rows):
-        columns = st.columns(cols_count)
-        for c in range(cols_count):
-            idx = r * cols_count + c
-            if idx >= len(sorted_players): break
-            p = sorted_players[idx]
-            with columns[c]:
-                is_sel = p['id'] in st.session_state.selected_pids
-                label = f"✅ {p['nickname']}" if is_sel else f"{p['nickname']}"
-                if st.button(label, key=f"sel_p_{idx}", use_container_width=True):
-                    if is_sel: st.session_state.selected_pids.remove(p['id'])
-                    else: st.session_state.selected_pids.append(p['id'])
-                    st.rerun()
+
+    # HTML-сетка 2 колонки
+    html = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;padding:4px;">'
+    for p in sorted_players:
+        is_sel = p['id'] in st.session_state.selected_pids
+        if is_sel:
+            bg = "#2e7d32"
+            border = "2px solid #4CAF50"
+            check = "✅ "
+        else:
+            bg = "#1a1a3d"
+            border = "2px solid #444"
+            check = ""
+        html += (
+            f'<a href="#" id="{p["id"]}" style="'
+            f'display:flex;align-items:center;justify-content:center;'
+            f'background:{bg};color:white;border:{border};border-radius:8px;'
+            f'padding:10px 4px;font-size:15px;font-weight:bold;'
+            f'text-decoration:none;min-height:44px;text-align:center;'
+            f'">{check}{p["nickname"]}</a>'
+        )
+    html += '</div>'
+
+    clicked = click_detector(html, key="player_grid")
+
+    if clicked and clicked != "":
+        if clicked in st.session_state.selected_pids:
+            st.session_state.selected_pids.remove(clicked)
+        else:
+            st.session_state.selected_pids.append(clicked)
+        st.rerun()
 
     st.markdown("---")
     with st.expander("➕ Добавить нового игрока"):
@@ -119,7 +136,6 @@ def screen_select_players():
     st.markdown("---")
     if st.button("⬅️ Назад", use_container_width=True, key="players_back"):
         go("select_mode"); st.rerun()
-
 
 
 def _finalize_players(db):
