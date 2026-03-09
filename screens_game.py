@@ -207,7 +207,7 @@ def screen_game_day():
 
         .section-title {{ font-size:20px; font-weight:bold; color:#aaa; padding:4px 0; }}
         .nom-summary {{
-            font-size:30px; color:#ccc; padding:8px 12px;
+            font-size:28px; color:#ccc; padding:8px 12px;
             background:#1a1a2e; border-radius:6px; margin:4px 0;
             line-height:1.2;
         }}
