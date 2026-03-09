@@ -76,19 +76,11 @@ def screen_select_players():
     can_go = count >= 7
 
     st.markdown(
-        f'<div id="info-bar" style="background:#2a2a4a;padding:10px 12px;border-radius:8px;'
+        f'<div style="background:#2a2a4a;padding:10px 12px;border-radius:8px;'
         f'font-size:18px;text-align:center;color:#aaa;">'
-        f'Выбрано: <b style="color:white;font-size:24px;margin-left:8px;">{count}</b>'
-        f'<span id="screen-size" style="margin-left:20px;color:#0f0;font-size:12px;"></span>'
-        f'</div>'
-        f'<script>'
-        f'(function(){{ var el=document.getElementById("screen-size");'
-        f'if(el) el.textContent="["+window.innerWidth+"x"+window.innerHeight+"]";'
-        f'}})();'
-        f'</script>',
+        f'Выбрано: <b style="color:white;font-size:24px;margin-left:8px;">{count}</b></div>',
         unsafe_allow_html=True
     )
-
     if can_go:
         if st.button(f"✅ Далее ({count})", use_container_width=True, key="players_next"):
             _finalize_players(db)
@@ -99,21 +91,16 @@ def screen_select_players():
     st.markdown("---")
 
     sorted_players = sorted(db['players'], key=lambda p: get_play_count(db, p['id']), reverse=True)
-    cols_count = 2
-    rows = math.ceil(len(sorted_players) / cols_count)
-    for r in range(rows):
-        columns = st.columns(cols_count)
-        for c in range(cols_count):
-            idx = r * cols_count + c
-            if idx >= len(sorted_players): break
-            p = sorted_players[idx]
-            with columns[c]:
-                is_sel = p['id'] in st.session_state.selected_pids
-                label = f"✅ {p['nickname']}" if is_sel else f"{p['nickname']}"
-                if st.button(label, key=f"sel_p_{idx}", use_container_width=True):
-                    if is_sel: st.session_state.selected_pids.remove(p['id'])
-                    else: st.session_state.selected_pids.append(p['id'])
-                    st.rerun()
+
+    for idx, p in enumerate(sorted_players):
+        is_sel = p['id'] in st.session_state.selected_pids
+        label = f"✅ {p['nickname']}" if is_sel else f"{p['nickname']}"
+        if st.button(label, key=f"sel_p_{idx}", use_container_width=True):
+            if is_sel:
+                st.session_state.selected_pids.remove(p['id'])
+            else:
+                st.session_state.selected_pids.append(p['id'])
+            st.rerun()
 
     st.markdown("---")
     with st.expander("➕ Добавить нового игрока"):
@@ -131,6 +118,8 @@ def screen_select_players():
     if st.button("⬅️ Назад", use_container_width=True, key="players_back"):
         go("select_mode")
         st.rerun()
+
+
 
 
 def _finalize_players(db):
@@ -436,7 +425,6 @@ def screen_players_list():
         '<p style="font-size:22px;font-weight:bold;color:#fff;">База игроков</p></div>',
         unsafe_allow_html=True
     )
-
     with st.form("add_player"):
         c1, c2 = st.columns(2)
         rn = c1.text_input("Реальное имя"); nn = c2.text_input("Псевдоним")
