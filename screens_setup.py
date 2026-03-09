@@ -11,32 +11,127 @@ from shared import (
 )
 import streamlit.components.v1 as components
 
-def screen_main_menu():
-    st.markdown(
-        '<div style="text-align:center;padding:20px 0 5px;">'
-        '<p style="font-size:80px;margin:0;">🎭</p>'
-        '<p style="font-size:24px;font-weight:bold;color:#fff;">Mafia Companion</p></div>',
-        unsafe_allow_html=True
-    )
 
-    if st.button("🕹️ Новая игра", use_container_width=True, key="main_new"):
+def screen_main_menu():
+    import streamlit.components.v1 as components
+
+    # HTML главный экран
+    components.html("""
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { background: transparent; font-family: -apple-system, sans-serif; }
+        .menu-wrap {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px 10px;
+            gap: 16px;
+        }
+        .logo { font-size: 80px; }
+        .title { font-size: 24px; font-weight: bold; color: #fff; }
+        .btn-big {
+            width: 160px;
+            height: 160px;
+            border-radius: 20px;
+            background: linear-gradient(135deg, #ff4b4b, #c0392b);
+            border: none;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: transform 0.15s;
+        }
+        .btn-big:hover { transform: scale(1.05); }
+        .btn-big:active { transform: scale(0.95); }
+        .btn-big .icon { font-size: 48px; }
+        .btn-big .label { font-size: 18px; font-weight: bold; color: #fff; }
+        .row {
+            display: flex;
+            gap: 8px;
+            width: 100%;
+            max-width: 340px;
+            justify-content: center;
+        }
+        .btn-sm {
+            flex: 1;
+            height: 60px;
+            border-radius: 12px;
+            background: #262730;
+            border: 1px solid #555;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 2px;
+            transition: transform 0.15s;
+        }
+        .btn-sm:hover { background: #3a3a4a; border-color: #ff4b4b; }
+        .btn-sm:active { transform: scale(0.95); }
+        .btn-sm .icon { font-size: 20px; }
+        .btn-sm .label { font-size: 11px; font-weight: bold; color: #ccc; }
+    </style>
+    <div class="menu-wrap">
+        <div class="logo">🎭</div>
+        <div class="title">Mafia Companion</div>
+        <button class="btn-big" onclick="click_st('main_new')">
+            <span class="icon">🕹️</span>
+            <span class="label">Новая игра</span>
+        </button>
+        <div class="row">
+            <button class="btn-sm" onclick="click_st('main_players')">
+                <span class="icon">👥</span>
+                <span class="label">Игроки</span>
+            </button>
+            <button class="btn-sm" onclick="click_st('main_archive')">
+                <span class="icon">📦</span>
+                <span class="label">Архив</span>
+            </button>
+            <button class="btn-sm" onclick="click_st('main_export')">
+                <span class="icon">📤</span>
+                <span class="label">Экспорт</span>
+            </button>
+        </div>
+    </div>
+    <script>
+    function click_st(key) {
+        const btns = window.parent.document.querySelectorAll('button[kind="secondary"]');
+        for (const b of btns) {
+            if (b.innerText.includes(key.replace('main_',''))) {
+                b.click();
+                return;
+            }
+        }
+        // fallback: ищем по data-testid
+        const all = window.parent.document.querySelectorAll('[data-testid="baseButton-secondary"]');
+        all.forEach(b => {
+            const txt = b.textContent.toLowerCase();
+            if (key === 'main_new' && txt.includes('новая')) b.click();
+            if (key === 'main_players' && txt.includes('игрок')) b.click();
+            if (key === 'main_archive' && txt.includes('архив')) b.click();
+            if (key === 'main_export' && txt.includes('экспорт')) b.click();
+        });
+    }
+    </script>
+    """, height=420)
+
+    # Скрытые Streamlit-кнопки для обработки логики
+    st.markdown('<div style="position:absolute;left:-9999px;opacity:0;pointer-events:none;">', unsafe_allow_html=True)
+    if st.button("Новая", key="main_new"):
         go("select_mode")
         st.rerun()
-
-    c1, c2, c3 = st.columns(3)
-    with c1:
-        if st.button("👥 Игроки", use_container_width=True, key="main_players"):
-            go("manage_players")
-            st.rerun()
-    with c2:
-        if st.button("📦 Архив", use_container_width=True, key="main_archive"):
-            go("archive")
-            st.rerun()
-    with c3:
-        if st.button("📤 Экспорт", use_container_width=True, key="main_export"):
-            go("export")
-            st.rerun()
-
+    if st.button("Игроки", key="main_players"):
+        go("manage_players")
+        st.rerun()
+    if st.button("Архив", key="main_archive"):
+        go("archive")
+        st.rerun()
+    if st.button("Экспорт", key="main_export"):
+        go("export")
+        st.rerun()
+    st.markdown('</div>', unsafe_allow_html=True)
 
 def screen_select_mode():
     st.markdown(
