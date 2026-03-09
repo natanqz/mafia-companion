@@ -981,9 +981,9 @@ def screen_night_zero():
         timer_color = "#ff2222"
 
     timer_done = phase == "done"
-    dash_offset = 628.32 * (1 - progress_pct / 100)
+    CIRCUMFERENCE = 565.49
+    dash_offset = CIRCUMFERENCE * (1 - progress_pct / 100)
 
-    # Кнопка play/pause
     if phase == "idle":
         play_label = "▶️ Старт"
         play_action = "clickN0('n0_Старт')"
@@ -997,7 +997,6 @@ def screen_night_zero():
         play_label = "▶️ Старт"
         play_action = "clickN0('n0_Старт')"
 
-    # Утро: всегда кликабельна, но стиль меняется
     if timer_done:
         morning_bg = "background:linear-gradient(135deg,#e67e22,#d35400);color:#fff;"
         morning_shadow = "box-shadow:0 0 20px rgba(230,126,34,0.5);"
@@ -1016,7 +1015,6 @@ def screen_night_zero():
         .header-icon {{ font-size: 56px; }}
         .header-title {{ font-size: 22px; font-weight: bold; color: #fff; }}
         .header-sub {{ font-size: 13px; color: #888; }}
-
         .timer-wrap {{
             position: relative;
             width: 200px; height: 200px;
@@ -1034,7 +1032,7 @@ def screen_night_zero():
             stroke: {timer_color};
             stroke-width: 6;
             stroke-linecap: round;
-            transition: stroke-dashoffset 0.9s linear, stroke 0.3s;
+            /* НЕТ transition — обновляем только через JS */
         }}
         .timer-text {{
             position: absolute;
@@ -1045,7 +1043,6 @@ def screen_night_zero():
             color: {timer_color};
             line-height: 1;
         }}
-
         .btn-row {{
             display: flex; gap: 8px; width: 100%;
         }}
@@ -1064,18 +1061,16 @@ def screen_night_zero():
             background: linear-gradient(135deg, #27ae60, #219a52);
             color: #fff;
         }}
-
         .btn-morning {{
             width: 100%; height: 56px; border-radius: 14px;
             {morning_bg}
             {morning_shadow}
             font-size: 18px; font-weight: bold;
             border: none; cursor: pointer;
-            transition: all 0.3s;
+            transition: background 0.3s, color 0.3s, box-shadow 0.3s;
         }}
         .btn-morning:active {{ transform: scale(0.95); }}
         .btn-morning:hover {{ filter: brightness(1.15); }}
-
         .notes-wrap {{
             width: 100%;
             background: #1a1a2e;
@@ -1093,7 +1088,6 @@ def screen_night_zero():
             font-family: -apple-system, sans-serif;
         }}
         .notes-area:focus {{ border-color: #4CAF50; }}
-
         .divider {{ border-top: 1px solid #333; width: 100%; margin: 2px 0; }}
     </style>
     <div class="wrap">
@@ -1106,8 +1100,8 @@ def screen_night_zero():
                 <circle class="timer-bg" cx="100" cy="100" r="90"/>
                 <circle class="timer-progress" id="progressCircle"
                     cx="100" cy="100" r="90"
-                    stroke-dasharray="565.49"
-                    stroke-dashoffset="{565.49 * (1 - progress_pct / 100)}"
+                    stroke-dasharray="{CIRCUMFERENCE}"
+                    stroke-dashoffset="{dash_offset}"
                 />
             </svg>
             <div class="timer-text" id="timerText">{sec_display}</div>
@@ -1222,6 +1216,76 @@ def screen_night_zero():
     })();
     </script>
     """, height=0)
+
+
+def _run_n0_live():
+    start = st.session_state.n0_timer_start
+    total = st.session_state.n0_seconds
+    if not start:
+        return
+
+    CIRCUMFERENCE = 565.49
+
+    while True:
+        elapsed = time.time() - start
+        sec = max(0, total - int(elapsed))
+        progress_pct = min(100, int(((total - sec) / max(total, 1)) * 100))
+        dash_offset = CIRCUMFERENCE * (1 - progress_pct / 100)
+
+        if sec > 10:
+            color = "#4CAF50"
+        elif sec > 5:
+            color = "#ff8c00"
+        else:
+            color = "#ff2222"
+
+        # Обновляем circle + text + кнопку через JS
+        morning_js = ""
+        if sec == 0:
+            morning_js = """
+                if (btn) {
+                    btn.style.background = 'linear-gradient(135deg,#e67e22,#d35400)';
+                    btn.style.color = '#fff';
+                    btn.style.boxShadow = '0 0 20px rgba(230,126,34,0.5)';
+                    btn.style.border = 'none';
+                }
+            """
+
+        components.html(f"""
+        <script>
+        (function() {{
+            var pd = window.parent.document;
+            var frames = pd.querySelectorAll('iframe');
+            for (var f of frames) {{
+                try {{
+                    var doc = f.contentDocument || f.contentWindow.document;
+                    var circle = doc.getElementById('progressCircle');
+                    var text = doc.getElementById('timerText');
+                    var btn = doc.getElementById('btnMorning');
+                    if (circle && text) {{
+                        circle.setAttribute('stroke-dashoffset', '{dash_offset}');
+                        circle.setAttribute('stroke', '{color}');
+                        text.style.color = '{color}';
+                        text.textContent = '{sec}';
+                        {morning_js}
+                        break;
+                    }}
+                }} catch(e) {{}}
+            }}
+        }})();
+        </script>
+        """, height=0)
+
+        if sec <= 10 and sec > 0:
+            play_sound_html(METRONOME_SOUND)
+        if sec == 0:
+            play_sound_html(WHISTLE_SOUND)
+            st.session_state.n0_phase = "done"
+            st.session_state.n0_timer_start = None
+            st.rerun()
+            break
+
+        time.sleep(1)
 
 
 def _run_n0_live():
