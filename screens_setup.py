@@ -15,22 +15,33 @@ import streamlit.components.v1 as components
 def screen_main_menu():
     import streamlit.components.v1 as components
 
-    # Прячем нативные кнопки по ключам
+    # Прячем нативные кнопки визуально, но оставляем кликабельными
     st.markdown("""
     <style>
-    #button-main_new,
-    #button-main_players,
-    #button-main_archive,
-    #button-main_export,
-    div[data-testid="stButton"]:has(button[kind]) {
-        position: absolute !important;
-        left: -9999px !important;
-        height: 0 !important;
+    div[data-testid="stMainBlockContainer"] div[data-testid="stButton"] {
+        height: 0px !important;
+        min-height: 0px !important;
         overflow: hidden !important;
-        pointer-events: none !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        opacity: 0 !important;
     }
     </style>
     """, unsafe_allow_html=True)
+
+    # Streamlit-кнопки (визуально скрыты)
+    if st.button("🕹️ Новая", key="main_new"):
+        go("select_mode")
+        st.rerun()
+    if st.button("👥 Игроки", key="main_players"):
+        go("manage_players")
+        st.rerun()
+    if st.button("📦 Архив", key="main_archive"):
+        go("archive")
+        st.rerun()
+    if st.button("📤 Экспорт", key="main_export"):
+        go("export")
+        st.rerun()
 
     # HTML главный экран
     components.html("""
@@ -93,31 +104,33 @@ def screen_main_menu():
     <div class="menu-wrap">
         <div class="logo">🎭</div>
         <div class="title">Mafia Companion</div>
-        <button class="btn-big" onclick="clickBtn('🕹️')">
+        <button class="btn-big" onclick="clickBtn('Новая')">
             <span class="icon">🕹️</span>
             <span class="label">Новая игра</span>
         </button>
         <div class="row">
-            <button class="btn-sm" onclick="clickBtn('👥')">
+            <button class="btn-sm" onclick="clickBtn('Игроки')">
                 <span class="icon">👥</span>
                 <span class="label">Игроки</span>
             </button>
-            <button class="btn-sm" onclick="clickBtn('📦')">
+            <button class="btn-sm" onclick="clickBtn('Архив')">
                 <span class="icon">📦</span>
                 <span class="label">Архив</span>
             </button>
-            <button class="btn-sm" onclick="clickBtn('📤')">
+            <button class="btn-sm" onclick="clickBtn('Экспорт')">
                 <span class="icon">📤</span>
                 <span class="label">Экспорт</span>
             </button>
         </div>
     </div>
     <script>
-    function clickBtn(emoji) {
+    function clickBtn(text) {
         const doc = window.parent.document;
-        const buttons = doc.querySelectorAll('button[data-testid="baseButton-secondary"]');
+        const buttons = doc.querySelectorAll('button');
         for (let b of buttons) {
-            if (b.textContent.includes(emoji)) {
+            if (b.textContent.includes(text)) {
+                b.style.opacity = '1';
+                b.style.pointerEvents = 'auto';
                 b.click();
                 return;
             }
@@ -125,34 +138,6 @@ def screen_main_menu():
     }
     </script>
     """, height=420)
-
-    # Streamlit-кнопки (визуально скрыты, но кликабельны через JS)
-    if st.button("🕹️ Новая", key="main_new"):
-        go("select_mode")
-        st.rerun()
-    if st.button("👥 Игроки", key="main_players"):
-        go("manage_players")
-        st.rerun()
-    if st.button("📦 Архив", key="main_archive"):
-        go("archive")
-        st.rerun()
-    if st.button("📤 Экспорт", key="main_export"):
-        go("export")
-        st.rerun()
-
-    # Прячем кнопки после рендера через JS
-    st.markdown("""
-    <script>
-    const btns = document.querySelectorAll('button[data-testid="baseButton-secondary"]');
-    btns.forEach(b => {
-        if (['🕹️','👥','📦','📤'].some(e => b.textContent.includes(e))) {
-            b.closest('div[data-testid="stButton"]').style.cssText = 
-                'position:absolute;left:-9999px;height:0;overflow:hidden;';
-        }
-    });
-    </script>
-    """, unsafe_allow_html=True)
-
 
 
 def screen_select_mode():
