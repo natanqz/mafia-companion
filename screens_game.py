@@ -173,9 +173,9 @@ def screen_game_day():
         .divider {{ border-top:1px solid #333; width:100%; margin:4px 0; }}
 
         .bar {{
-            height:38px; display:flex; align-items:center;
+            height:44px; display:flex; align-items:center;
             padding:4px 12px; margin:2px 0; border-radius:6px;
-            font-size:14px; font-weight:bold; position:relative;
+            font-size:18px; font-weight:bold; position:relative;
             overflow:hidden; color:#fff;
         }}
         .bar-fill {{
@@ -195,8 +195,8 @@ def screen_game_day():
 
         .grid {{ display:flex; flex-wrap:wrap; gap:4px; }}
         .grid-btn {{
-            flex:0 0 18%; height:36px; border-radius:6px;
-            font-size:11px; font-weight:bold; cursor:pointer;
+            flex:0 0 18%; height:44px; border-radius:6px;
+            font-size:22px; font-weight:bold; cursor:pointer;
             border:1px solid #555; background:#262730; color:#ccc;
         }}
         .grid-btn:active {{ transform:scale(0.95); }}
@@ -205,10 +205,11 @@ def screen_game_day():
         .grid-btn.foul-btn {{ border-color:#666; }}
         .grid-btn.foul-max {{ background:#3a1a1a; border-color:#662222; color:#ff4444; }}
 
-        .section-title {{ font-size:15px; font-weight:bold; color:#aaa; padding:4px 0; }}
+        .section-title {{ font-size:20px; font-weight:bold; color:#aaa; padding:4px 0; }}
         .nom-summary {{
-            font-size:14px; color:#ccc; padding:4px 8px;
+            font-size:42px; color:#ccc; padding:8px 12px;
             background:#1a1a2e; border-radius:6px; margin:4px 0;
+            line-height:1.2;
         }}
 
         .btn-row {{ display:flex; gap:8px; width:100%; }}
@@ -483,19 +484,18 @@ def _build_fouls_grid(sorted_all, day, fmt_grid):
 def _calc_day_height(players, all_done, nominees):
     n = len(players)
     h = 500
-    h += n * 44
-    h += 60 + (n // 5 + 1) * 42
+    h += n * 50          # bars стали выше
+    h += 70 + (n // 5 + 1) * 52   # nom grid
     if nominees:
-        h += len(set(nominees.values())) * 48
+        h += len(set(nominees.values())) * 80  # nom summary крупнее
     else:
-        h += 48
-    h += 60 + (n // 5 + 1) * 42
+        h += 80
+    h += 70 + (n // 5 + 1) * 52   # fouls grid
     if all_done:
         h += 70
     h += 60
-    h += 120
+    h += 150
     return h
-
 
 
 
