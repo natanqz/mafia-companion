@@ -1,0 +1,507 @@
+{
+  "players": [
+    {
+      "id": "2e3ba881-b209-4948-b4b5-428da735a652",
+      "real_name": "Анатолий",
+      "nickname": "Кот ученый",
+      "history": [
+        "46aaa0d2-f157-4648-9a74-c15e2b54515e",
+        "6e2270a4-0dcb-4926-8fd4-b29b1e8e2b25"
+      ]
+    },
+    {
+      "id": "10a67a7e-a500-4a4c-8b08-fc3fe4c9ceea",
+      "real_name": "Тимур",
+      "nickname": "Красавчик",
+      "history": [
+        "46aaa0d2-f157-4648-9a74-c15e2b54515e",
+        "6e2270a4-0dcb-4926-8fd4-b29b1e8e2b25"
+      ]
+    },
+    {
+      "id": "d0d0981c-5641-4b61-809f-61930338b190",
+      "real_name": "Георгий",
+      "nickname": "Тамада",
+      "history": [
+        "46aaa0d2-f157-4648-9a74-c15e2b54515e",
+        "6e2270a4-0dcb-4926-8fd4-b29b1e8e2b25"
+      ]
+    },
+    {
+      "id": "f86494bd-6f3b-4ab5-98a5-915a4963fd8f",
+      "real_name": "Полина",
+      "nickname": "Негр",
+      "history": [
+        "46aaa0d2-f157-4648-9a74-c15e2b54515e",
+        "6e2270a4-0dcb-4926-8fd4-b29b1e8e2b25"
+      ]
+    },
+    {
+      "id": "373228af-3e02-4907-9279-976ce36f01b7",
+      "real_name": "Игорь",
+      "nickname": "Банан",
+      "history": [
+        "46aaa0d2-f157-4648-9a74-c15e2b54515e",
+        "6e2270a4-0dcb-4926-8fd4-b29b1e8e2b25"
+      ]
+    },
+    {
+      "id": "c650f184-9ff9-4c2a-81ab-74ec73e5cb1d",
+      "real_name": "Екатерина",
+      "nickname": "Ведьма",
+      "history": [
+        "46aaa0d2-f157-4648-9a74-c15e2b54515e",
+        "6e2270a4-0dcb-4926-8fd4-b29b1e8e2b25"
+      ]
+    },
+    {
+      "id": "bdaaec4f-7c92-4978-a827-c92e7ec238b4",
+      "real_name": "Кирилл",
+      "nickname": "Нагетс",
+      "history": [
+        "46aaa0d2-f157-4648-9a74-c15e2b54515e",
+        "6e2270a4-0dcb-4926-8fd4-b29b1e8e2b25"
+      ]
+    },
+    {
+      "id": "546cff35-a540-4785-aa6e-c935375c9611",
+      "real_name": "Роман",
+      "nickname": "Ромб",
+      "history": [
+        "46aaa0d2-f157-4648-9a74-c15e2b54515e",
+        "6e2270a4-0dcb-4926-8fd4-b29b1e8e2b25"
+      ]
+    },
+    {
+      "id": "c0d690e2-0518-42dc-99f8-74dcf0d612d3",
+      "real_name": "Лена",
+      "nickname": "Шинка",
+      "history": [
+        "46aaa0d2-f157-4648-9a74-c15e2b54515e",
+        "6e2270a4-0dcb-4926-8fd4-b29b1e8e2b25"
+      ]
+    },
+    {
+      "id": "68ad3404-f504-4459-82af-92a2d19d6a4c",
+      "real_name": "Николай",
+      "nickname": "Яблоко",
+      "history": [
+        "46aaa0d2-f157-4648-9a74-c15e2b54515e",
+        "6e2270a4-0dcb-4926-8fd4-b29b1e8e2b25"
+      ]
+    },
+    {
+      "id": "683dee0d-cf86-4f8c-afcc-60af0b8b9222",
+      "real_name": "Борис",
+      "nickname": "Кетчуп",
+      "history": [
+        "46aaa0d2-f157-4648-9a74-c15e2b54515e",
+        "6e2270a4-0dcb-4926-8fd4-b29b1e8e2b25"
+      ]
+    }
+  ],
+  "games": [
+    {
+      "id": "46aaa0d2-f157-4648-9a74-c15e2b54515e",
+      "date": "2026-03-08",
+      "mode": "спортивная",
+      "author": "---",
+      "players": [
+        {
+          "id": "2e3ba881-b209-4948-b4b5-428da735a652",
+          "nickname": "Кот ученый",
+          "number": 1,
+          "role": "Мафия",
+          "fouls": 0,
+          "status": "alive"
+        },
+        {
+          "id": "10a67a7e-a500-4a4c-8b08-fc3fe4c9ceea",
+          "nickname": "Тимур",
+          "number": 2,
+          "role": "Мирный",
+          "fouls": 0,
+          "status": "alive"
+        },
+        {
+          "id": "d0d0981c-5641-4b61-809f-61930338b190",
+          "nickname": "Георигий",
+          "number": 3,
+          "role": "Мирный",
+          "fouls": 0,
+          "status": "alive"
+        },
+        {
+          "id": "f86494bd-6f3b-4ab5-98a5-915a4963fd8f",
+          "nickname": "Полина",
+          "number": 4,
+          "role": "Мирный",
+          "fouls": 0,
+          "status": "alive"
+        },
+        {
+          "id": "373228af-3e02-4907-9279-976ce36f01b7",
+          "nickname": "Инорь",
+          "number": 5,
+          "role": "Мирный",
+          "fouls": 0,
+          "status": "alive"
+        },
+        {
+          "id": "c650f184-9ff9-4c2a-81ab-74ec73e5cb1d",
+          "nickname": "Екатерина",
+          "number": 6,
+          "role": "Мирный",
+          "fouls": 0,
+          "status": "alive"
+        },
+        {
+          "id": "bdaaec4f-7c92-4978-a827-c92e7ec238b4",
+          "nickname": "Кирилл",
+          "number": 7,
+          "role": "Мирный",
+          "fouls": 0,
+          "status": "alive"
+        },
+        {
+          "id": "546cff35-a540-4785-aa6e-c935375c9611",
+          "nickname": "Роман",
+          "number": 8,
+          "role": "Мафия",
+          "fouls": 0,
+          "status": "alive"
+        },
+        {
+          "id": "c0d690e2-0518-42dc-99f8-74dcf0d612d3",
+          "nickname": "Лена",
+          "number": 9,
+          "role": "Шериф",
+          "fouls": 0,
+          "status": "alive"
+        },
+        {
+          "id": "68ad3404-f504-4459-82af-92a2d19d6a4c",
+          "nickname": "Николай",
+          "number": 10,
+          "role": "Дон",
+          "fouls": 0,
+          "status": "alive"
+        },
+        {
+          "id": "683dee0d-cf86-4f8c-afcc-60af0b8b9222",
+          "nickname": "Борис",
+          "number": 11,
+          "role": "Мафия",
+          "fouls": 0,
+          "status": "alive"
+        }
+      ],
+      "winner": "мирные",
+      "log": []
+    },
+    {
+      "id": "6e2270a4-0dcb-4926-8fd4-b29b1e8e2b25",
+      "date": "2026-03-08",
+      "mode": "спортивная",
+      "author": "---",
+      "players": [
+        {
+          "id": "2e3ba881-b209-4948-b4b5-428da735a652",
+          "nickname": "Кот ученый",
+          "number": 1,
+          "role": "Мафия",
+          "fouls": 0,
+          "status": "alive"
+        },
+        {
+          "id": "10a67a7e-a500-4a4c-8b08-fc3fe4c9ceea",
+          "nickname": "Тимур",
+          "number": 2,
+          "role": "Мирный",
+          "fouls": 0,
+          "status": "alive"
+        },
+        {
+          "id": "d0d0981c-5641-4b61-809f-61930338b190",
+          "nickname": "Георигий",
+          "number": 3,
+          "role": "Мирный",
+          "fouls": 0,
+          "status": "alive"
+        },
+        {
+          "id": "f86494bd-6f3b-4ab5-98a5-915a4963fd8f",
+          "nickname": "Полина",
+          "number": 4,
+          "role": "Мирный",
+          "fouls": 0,
+          "status": "alive"
+        },
+        {
+          "id": "373228af-3e02-4907-9279-976ce36f01b7",
+          "nickname": "Инорь",
+          "number": 5,
+          "role": "Мирный",
+          "fouls": 0,
+          "status": "alive"
+        },
+        {
+          "id": "c650f184-9ff9-4c2a-81ab-74ec73e5cb1d",
+          "nickname": "Екатерина",
+          "number": 6,
+          "role": "Мирный",
+          "fouls": 0,
+          "status": "alive"
+        },
+        {
+          "id": "bdaaec4f-7c92-4978-a827-c92e7ec238b4",
+          "nickname": "Кирилл",
+          "number": 7,
+          "role": "Мирный",
+          "fouls": 0,
+          "status": "alive"
+        },
+        {
+          "id": "546cff35-a540-4785-aa6e-c935375c9611",
+          "nickname": "Роман",
+          "number": 8,
+          "role": "Мафия",
+          "fouls": 0,
+          "status": "alive"
+        },
+        {
+          "id": "c0d690e2-0518-42dc-99f8-74dcf0d612d3",
+          "nickname": "Лена",
+          "number": 9,
+          "role": "Шериф",
+          "fouls": 0,
+          "status": "alive"
+        },
+        {
+          "id": "68ad3404-f504-4459-82af-92a2d19d6a4c",
+          "nickname": "Николай",
+          "number": 10,
+          "role": "Дон",
+          "fouls": 0,
+          "status": "alive"
+        },
+        {
+          "id": "683dee0d-cf86-4f8c-afcc-60af0b8b9222",
+          "nickname": "Борис",
+          "number": 11,
+          "role": "Мафия",
+          "fouls": 0,
+          "status": "alive"
+        }
+      ],
+      "winner": "мирные",
+      "log": []
+    },
+    {
+      "date": "2026-03-09 02:44",
+      "mode": "спортивная",
+      "winner": "мафия",
+      "players": [
+        {
+          "number": 4,
+          "nickname": "Кот ученый",
+          "role": "Мирный",
+          "status": "dead",
+          "fouls": 0
+        },
+        {
+          "number": 9,
+          "nickname": "Красавчик",
+          "role": "Дон",
+          "status": "alive",
+          "fouls": 0
+        },
+        {
+          "number": 7,
+          "nickname": "Тамада",
+          "role": "Мирный",
+          "status": "dead",
+          "fouls": 0
+        },
+        {
+          "number": 2,
+          "nickname": "Негр",
+          "role": "Мирный",
+          "status": "dead",
+          "fouls": 0
+        },
+        {
+          "number": 3,
+          "nickname": "Ведьма",
+          "role": "Шериф",
+          "status": "dead",
+          "fouls": 0
+        },
+        {
+          "number": 10,
+          "nickname": "Нагетс",
+          "role": "Мафия",
+          "status": "dead",
+          "fouls": 0
+        },
+        {
+          "number": 5,
+          "nickname": "Ромб",
+          "role": "Мафия",
+          "status": "dead",
+          "fouls": 0
+        },
+        {
+          "number": 6,
+          "nickname": "Банан",
+          "role": "Мирный",
+          "status": "dead",
+          "fouls": 0
+        },
+        {
+          "number": 1,
+          "nickname": "Шинка",
+          "role": "Мирный",
+          "status": "dead",
+          "fouls": 0
+        },
+        {
+          "number": 8,
+          "nickname": "Кетчуп",
+          "role": "Мирный",
+          "status": "dead",
+          "fouls": 0
+        }
+      ],
+      "log": [
+        "Ночь 0: Знакомство",
+        "День 1: #1 → #1",
+        "День 1: единственная кандидатура",
+        "Ночь 1: Убит #10 (Нагетс)",
+        "Ночь 1: Дон проверил #6",
+        "Ночь 1: Шериф проверил #4",
+        "День 2: #2 → #1",
+        "День 2: #5 → #2",
+        "День 2: Исключён #1",
+        "Ночь 2: Промах",
+        "Ночь 2: Дон проверил #3",
+        "Ночь 2: Шериф проверил #2",
+        "День 3: #3 → #2",
+        "День 3: #5 → #3",
+        "День 3: Автокатастрофа",
+        "День 3: Автокатастрофа",
+        "День 3: Исключены все",
+        "Ночь 3: Убит #4 (Кот ученый)",
+        "День 4: #5 → #5",
+        "День 4: #9 → #6",
+        "День 4: Исключён #5",
+        "Ночь 4: Убит #6 (Банан)",
+        "День 5: #7 → #7",
+        "День 5: Исключён #7",
+        "Ночь 5: Убит #8 (Кетчуп)"
+      ]
+    },
+    {
+      "date": "2026-03-09 02:50",
+      "mode": "спортивная",
+      "winner": "мирные",
+      "players": [
+        {
+          "number": 1,
+          "nickname": "Кот ученый",
+          "role": "Дон",
+          "status": "dead",
+          "fouls": 0
+        },
+        {
+          "number": 8,
+          "nickname": "Красавчик",
+          "role": "Мирный",
+          "status": "alive",
+          "fouls": 0
+        },
+        {
+          "number": 4,
+          "nickname": "Тамада",
+          "role": "Мафия",
+          "status": "dead",
+          "fouls": 0
+        },
+        {
+          "number": 6,
+          "nickname": "Негр",
+          "role": "Мирный",
+          "status": "alive",
+          "fouls": 0
+        },
+        {
+          "number": 9,
+          "nickname": "Ведьма",
+          "role": "Мирный",
+          "status": "alive",
+          "fouls": 0
+        },
+        {
+          "number": 7,
+          "nickname": "Нагетс",
+          "role": "Мирный",
+          "status": "alive",
+          "fouls": 0
+        },
+        {
+          "number": 2,
+          "nickname": "Ромб",
+          "role": "Мафия",
+          "status": "dead",
+          "fouls": 0
+        },
+        {
+          "number": 5,
+          "nickname": "Банан",
+          "role": "Шериф",
+          "status": "alive",
+          "fouls": 0
+        },
+        {
+          "number": 10,
+          "nickname": "Шинка",
+          "role": "Мирный",
+          "status": "alive",
+          "fouls": 0
+        },
+        {
+          "number": 3,
+          "nickname": "Кетчуп",
+          "role": "Мирный",
+          "status": "dead",
+          "fouls": 0
+        }
+      ],
+      "log": [
+        "Ночь 0: Знакомство",
+        "День 1: #1 → #1",
+        "День 1: #2 → #2",
+        "День 1: Исключён #1",
+        "Лучший ход: [2, 3, 4]",
+        "Ночь 1: Убит #2 (Ромб)",
+        "День 2: #3 → #3",
+        "День 2: #5 → #4",
+        "День 2: Исключён #3",
+        "Лучший ход: [2, 3, 4]",
+        "Ночь 2: Убит #4 (Тамада)"
+      ]
+    }
+  ],
+  "last_composition": [
+    "2e3ba881-b209-4948-b4b5-428da735a652",
+    "10a67a7e-a500-4a4c-8b08-fc3fe4c9ceea",
+    "d0d0981c-5641-4b61-809f-61930338b190",
+    "f86494bd-6f3b-4ab5-98a5-915a4963fd8f",
+    "c650f184-9ff9-4c2a-81ab-74ec73e5cb1d",
+    "bdaaec4f-7c92-4978-a827-c92e7ec238b4",
+    "546cff35-a540-4785-aa6e-c935375c9611",
+    "373228af-3e02-4907-9279-976ce36f01b7",
+    "c0d690e2-0518-42dc-99f8-74dcf0d612d3",
+    "683dee0d-cf86-4f8c-afcc-60af0b8b9222"
+  ]
+}
