@@ -679,15 +679,20 @@ def _build_fouls_grid(sorted_all, day):
 
 def _calc_day_height(players, all_done, nominees):
     n = len(players)
-    h = 380  # header + timer + main btn + speaker
-    h += n * 44  # bars
-    h += 120  # nom grid
+    h = 480          # header + big timer + main btn + speaker labels + paddings
+    h += n * 44      # player bars
+    h += 60          # nom section title
+    h += (n // 5 + 1) * 42  # nom grid rows
     if nominees:
-        h += len(set(nominees.values())) * 40  # summaries
-    h += 120  # fouls grid
+        h += len(set(nominees.values())) * 48  # nom summaries
+    else:
+        h += 48      # запас на первую номинацию
+    h += 60          # fouls section title
+    h += (n // 5 + 1) * 42  # fouls grid rows
     if all_done:
-        h += 60  # bottom buttons
-    h += 60  # roles btn
+        h += 70      # bottom buttons
+    h += 60          # roles btn
+    h += 100         # safety padding
     return h
 
 
