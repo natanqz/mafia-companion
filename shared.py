@@ -68,7 +68,26 @@ def inject_styles():
         font-size: 12px !important;
         padding: 0 4px !important;
     }
-
+    /* Квадратная кнопка */
+    .square-btn div.stButton,
+    .square-btn .stButton {
+        display: flex !important;
+        justify-content: center !important;
+    }
+    .square-btn div.stButton > button,
+    .square-btn .stButton > button,
+    .square-btn button {
+        width: 120px !important;
+        min-width: 120px !important;
+        max-width: 120px !important;
+        height: 120px !important;
+        min-height: 120px !important;
+        max-height: 120px !important;
+        font-size: 20px !important;
+        padding: 4px !important;
+        line-height: 1.2 !important;
+        border-radius: 16px !important;
+    }
     .big-timer {
         font-size: 96px;
         text-align: center;
