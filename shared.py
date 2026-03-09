@@ -17,12 +17,29 @@ WHISTLE_SOUND = "whistle.mp3"
 def inject_styles():
     st.markdown("""
     <style>
-    /* Фиксированная минимальная ширина контента */
+    /* Блокируем адаптивность Streamlit */
+    .stApp {
+        min-width: 700px !important;
+        overflow-x: auto !important;
+    }
+    .stMain, [data-testid="stMain"] {
+        min-width: 700px !important;
+        overflow-x: auto !important;
+    }
     .stMainBlockContainer, [data-testid="stMainBlockContainer"] {
         min-width: 700px !important;
     }
-    .stMain, [data-testid="stMain"] {
+    [data-testid="stAppViewContainer"] {
+        min-width: 700px !important;
         overflow-x: auto !important;
+    }
+    /* Запрещаем колонкам схлопываться */
+    [data-testid="stHorizontalBlock"] {
+        flex-wrap: nowrap !important;
+        min-width: 0 !important;
+    }
+    [data-testid="column"] {
+        min-width: 0 !important;
     }
 
     div.stButton > button {
@@ -98,7 +115,6 @@ def inject_styles():
     .fs-civil-for-don { background: #cc0000; color: #fff; }
     </style>
     """, unsafe_allow_html=True)
-
 
 
 def inject_gold_buttons(texts=None):

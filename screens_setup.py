@@ -428,6 +428,25 @@ def screen_players_list():
         '<p style="font-size:22px;font-weight:bold;color:#fff;">База игроков</p></div>',
         unsafe_allow_html=True
     )
+    # Счётчик размера окна для отладки
+    components.html("""
+        <div id="size-display" style="
+            position:fixed; top:5px; right:5px; z-index:9999;
+            background:rgba(0,0,0,0.8); color:#0f0; padding:4px 10px;
+            border-radius:4px; font-size:14px; font-family:monospace;
+        "></div>
+        <script>
+        function updateSize() {
+            const w = window.parent.innerWidth;
+            const h = window.parent.innerHeight;
+            const el = document.getElementById('size-display');
+            if (el) el.textContent = w + ' x ' + h;
+        }
+        updateSize();
+        window.parent.addEventListener('resize', updateSize);
+        setInterval(updateSize, 1000);
+        </script>
+    """, height=0)
     with st.form("add_player"):
         c1, c2 = st.columns(2)
         rn = c1.text_input("Реальное имя"); nn = c2.text_input("Псевдоним")
