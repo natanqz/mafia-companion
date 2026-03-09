@@ -15,30 +15,31 @@ WHISTLE_SOUND = "whistle.mp3"
 
 # ---- STYLES ----
 def inject_styles():
-    gold_texts = [
-        "Ночь 0", "Наступает Утро", "Наступает утро", "Никого", "Голосование",
-        "Далее", "Итоги", "День 2", "День 3", "День 4", "День 5",
-        "День 6", "День 7", "День 8", "День 9", "День 10",
-        "К ночи"
-    ]
-
-    st.markdown(f"""
+    st.markdown("""
     <style>
-    div.stButton > button {{
+    /* Фиксированная минимальная ширина контента */
+    .stMainBlockContainer, [data-testid="stMainBlockContainer"] {
+        min-width: 700px !important;
+    }
+    .stMain, [data-testid="stMain"] {
+        overflow-x: auto !important;
+    }
+
+    div.stButton > button {
         height: 40px;
         font-size: 16px;
         font-weight: bold;
         border-radius: 8px;
         margin: 2px;
-    }}
-    .big-timer {{
+    }
+    .big-timer {
         font-size: 96px;
         text-align: center;
         font-weight: bold;
         margin: 0;
         padding: 10px;
-    }}
-    .player-bar {{
+    }
+    .player-bar {
         height: 40px;
         display: flex;
         align-items: center;
@@ -49,23 +50,23 @@ def inject_styles():
         font-weight: bold;
         position: relative;
         overflow: hidden;
-    }}
-    .player-bar .progress-fill {{
+    }
+    .player-bar .progress-fill {
         position: absolute;
         left: 0; top: 0; bottom: 0;
         background: rgba(76, 175, 80, 0.3);
         z-index: 0;
         border-radius: 6px;
-    }}
-    .player-bar .content {{
+    }
+    .player-bar .content {
         position: relative;
         z-index: 1;
         width: 100%;
         display: flex;
         align-items: center;
         justify-content: space-between;
-    }}
-    .player-row-dead {{
+    }
+    .player-row-dead {
         height: 20px;
         display: flex;
         align-items: center;
@@ -75,14 +76,14 @@ def inject_styles():
         font-size: 12px;
         opacity: 0.4;
         text-decoration: line-through;
-    }}
-    .counter-bar {{
+    }
+    .counter-bar {
         position: sticky; top: 0; background: #1a1a1a;
         padding: 10px; z-index: 100; text-align: center;
         font-size: 24px; font-weight: bold; color: white;
         border-bottom: 2px solid #444;
-    }}
-    .fullscreen-msg {{
+    }
+    .fullscreen-msg {
         width: 100%;
         padding: 60px 20px;
         text-align: center;
@@ -90,13 +91,15 @@ def inject_styles():
         font-weight: bold;
         border-radius: 16px;
         margin: 20px 0;
-    }}
-    .fs-mafia {{ background: #000; color: #fff; }}
-    .fs-civil {{ background: #cc0000; color: #fff; }}
-    .fs-sheriff-found {{ background: #00aa00; color: #fff; }}
-    .fs-civil-for-don {{ background: #cc0000; color: #fff; }}
+    }
+    .fs-mafia { background: #000; color: #fff; }
+    .fs-civil { background: #cc0000; color: #fff; }
+    .fs-sheriff-found { background: #00aa00; color: #fff; }
+    .fs-civil-for-don { background: #cc0000; color: #fff; }
     </style>
     """, unsafe_allow_html=True)
+
+
 
 def inject_gold_buttons(texts=None):
     if texts is None:
