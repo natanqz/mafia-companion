@@ -142,23 +142,130 @@ def screen_main_menu():
 
 
 def screen_select_mode():
-    st.markdown(
-        '<div style="text-align:center;padding:40px 0 10px;">'
-        '<p style="font-size:100px;margin:0;">🃏</p>'
-        '<p style="font-size:24px;font-weight:bold;color:#fff;">Выберите режим</p></div>',
-        unsafe_allow_html=True
-    )
-    st.markdown("---")
-    if st.button("🏆 Спортивная мафия", use_container_width=True, key="mode_sport"):
+    import streamlit.components.v1 as components
+
+    # Прячем нативные кнопки
+    st.markdown("""
+    <style>
+    div[data-testid="stMainBlockContainer"] div[data-testid="stButton"] {
+        height: 0px !important;
+        min-height: 0px !important;
+        overflow: hidden !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        opacity: 0 !important;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
+    # Скрытые Streamlit-кнопки
+    if st.button("sm_Спорт", key="mode_sport"):
         st.session_state.game = {"mode": "спортивная", "players": [], "roles": {}}
         go("select_players"); st.rerun()
-    st.markdown("")
-    if st.button("🏙️ Городская мафия", use_container_width=True, key="mode_city"):
+    if st.button("sm_Город", key="mode_city"):
         st.session_state.game = {"mode": "городская", "players": [], "roles": {}}
         go("select_players"); st.rerun()
-    st.markdown(""); st.markdown("---")
-    if st.button("⬅️ Назад", use_container_width=True, key="mode_back"):
+    if st.button("sm_Назад", key="mode_back"):
         go("main_menu"); st.rerun()
+
+    # HTML экран
+    components.html("""
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { background: transparent; font-family: -apple-system, sans-serif; }
+        .wrap {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px 10px;
+            gap: 12px;
+            min-height: 480px;
+            position: relative;
+        }
+        .icon { font-size: 80px; }
+        .title { font-size: 22px; font-weight: bold; color: #fff; margin-bottom: 8px; }
+        .cards {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        .card {
+            width: 150px;
+            height: 150px;
+            border-radius: 18px;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: transform 0.15s;
+        }
+        .card:hover { transform: scale(1.05); }
+        .card:active { transform: scale(0.95); }
+        .card .emoji { font-size: 48px; }
+        .card .label { font-size: 15px; font-weight: bold; }
+        .card .sub { font-size: 11px; opacity: 0.7; }
+        .card-sport {
+            background: linear-gradient(135deg, #e67e22, #d35400);
+            color: #fff;
+        }
+        .card-city {
+            background: linear-gradient(135deg, #3498db, #2980b9);
+            color: #fff;
+        }
+        .back-btn {
+            position: absolute;
+            bottom: 12px;
+            left: 12px;
+            background: #262730;
+            border: 1px solid #555;
+            color: #ccc;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.15s;
+        }
+        .back-btn:hover { background: #3a3a4a; border-color: #ff4b4b; }
+        .back-btn:active { transform: scale(0.95); }
+    </style>
+    <div class="wrap">
+        <div class="icon">🃏</div>
+        <div class="title">Выберите режим</div>
+        <div class="cards">
+            <button class="card card-sport" onclick="clickBtn('sm_Спорт')">
+                <span class="emoji">🏆</span>
+                <span class="label">Спортивная</span>
+                <span class="sub">10 игроков</span>
+            </button>
+            <button class="card card-city" onclick="clickBtn('sm_Город')">
+                <span class="emoji">🏙️</span>
+                <span class="label">Городская</span>
+                <span class="sub">7+ игроков</span>
+            </button>
+        </div>
+        <button class="back-btn" onclick="clickBtn('sm_Назад')">⬅️ Назад</button>
+    </div>
+    <script>
+    function clickBtn(text) {
+        const doc = window.parent.document;
+        const buttons = doc.querySelectorAll('button');
+        for (let b of buttons) {
+            if (b.textContent.includes(text)) {
+                b.style.opacity = '1';
+                b.style.pointerEvents = 'auto';
+                b.click();
+                return;
+            }
+        }
+    }
+    </script>
+    """, height=500)
+
 
 
 def screen_select_players():
