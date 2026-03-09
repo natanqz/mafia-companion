@@ -270,16 +270,18 @@ def screen_select_mode():
 
 def screen_select_players():
     import streamlit.components.v1 as components
-    import json as _json
     db = load_db()
 
     if "selected_pids" not in st.session_state:
         st.session_state.selected_pids = []
 
     count = len(st.session_state.selected_pids)
-    can_go = count >= 7
+    total = len(db['players'])
+    min_players = 7
+    can_go = count >= min_players
+    display_max = max(total, count, min_players)
 
-    # Прячем нативные кнопки
+    # Прячем нативные кнопки и экспандеры
     st.markdown("""
     <style>
     div[data-testid="stMainBlockContainer"] div[data-testid="stButton"] {
@@ -290,13 +292,10 @@ def screen_select_players():
         padding: 0 !important;
         opacity: 0 !important;
     }
-    div[data-testid="stMainBlockContainer"] div[data-testid="stExpander"] {
-        height: 0px !important;
-        min-height: 0px !important;
-        overflow: hidden !important;
-        margin: 0 !important;
-        padding: 0 !important;
-        opacity: 0 !important;
+    div[data-testid="stMainBlockContainer"] div[data-testid="stExpander"],
+    div[data-testid="stMainBlockContainer"] div[data-testid="stTextInput"],
+    div[data-testid="stMainBlockContainer"] div[data-testid="stMarkdownContainer"] {
+        /* не прячем — нужны для формы добавления */
     }
     </style>
     """, unsafe_allow_html=True)
@@ -305,7 +304,7 @@ def screen_select_players():
     sorted_players = sorted(db['players'], key=lambda p: get_play_count(db, p['id']), reverse=True)
 
     for idx, p in enumerate(sorted_players):
-        if st.button(f"sp_toggle_{idx}", key=f"sel_p_{idx}"):
+        if st.button(f"sp_t_{idx}", key=f"sel_p_{idx}"):
             pid = p['id']
             if pid in st.session_state.selected_pids:
                 st.session_state.selected_pids.remove(pid)
@@ -313,11 +312,12 @@ def screen_select_players():
                 st.session_state.selected_pids.append(pid)
             st.rerun()
 
-    if st.button("sp_Далее", key="players_next"):
-        _finalize_players(db)
-        st.rerun()
+    if st.button("sp_Старт", key="players_next"):
+        if can_go:
+            _finalize_players(db)
+            st.rerun()
 
-    if st.button("sp_Повторить", key="repeat_comp"):
+    if st.button("sp_Повтор", key="repeat_comp"):
         st.session_state.selected_pids = db.get('last_composition', [])[:]
         st.rerun()
 
@@ -325,23 +325,38 @@ def screen_select_players():
         go("select_mode")
         st.rerun()
 
-    # === Генерируем HTML с данными игроков ===
+    if st.button("sp_Добавить", key="quick_add_go"):
+        rn = st.session_state.get("qa_name", "").strip()
+        nn = st.session_state.get("qa_nick", "").strip()
+        if rn and nn:
+            pid = str(uuid.uuid4())
+            db['players'].append({"id": pid, "real_name": rn, "nickname": nn, "history": []})
+            save_db(db)
+            st.session_state.qa_name = ""
+            st.session_state.qa_nick = ""
+            st.rerun()
+
+    # === Генерируем HTML ===
     players_html = ""
     for idx, p in enumerate(sorted_players):
         is_sel = p['id'] in st.session_state.selected_pids
         games = get_play_count(db, p['id'])
-        games_str = f' <span class="games">({games})</span>' if games > 0 else ""
+        games_str = f'<span class="games">({games})</span>' if games > 0 else ""
         sel_class = "sel" if is_sel else ""
-        check = "✅" if is_sel else "⬜"
+        check = "✅ " if is_sel else ""
         players_html += (
-            f'<button class="p-btn {sel_class}" onclick="clickBtn(\'sp_toggle_{idx}\')">'
-            f'{check} {p["nickname"]}{games_str}</button>\n'
+            f'<button class="p-btn {sel_class}" onclick="clickBtn(\'sp_t_{idx}\')">'
+            f'{check}{p["nickname"]} {games_str}</button>\n'
         )
 
-    has_last = "true" if db.get('last_composition') else "false"
-    next_label = f"✅ Далее ({count})" if can_go else "Минимум 7"
-    next_disabled = "" if can_go else "disabled"
-    next_opacity = "1" if can_go else "0.4"
+    has_last = bool(db.get('last_composition'))
+    next_opacity = "1" if can_go else "0.35"
+    next_cursor = "pointer" if can_go else "not-allowed"
+    counter_color = "#4CAF50" if can_go else "#ff8844"
+
+    repeat_html = ""
+    if has_last:
+        repeat_html = '<button class="ctrl-btn btn-repeat" onclick="clickBtn(\'sp_Повтор\')">🔄 Повтор</button>'
 
     components.html(f"""
     <style>
@@ -352,70 +367,74 @@ def screen_select_players():
             flex-direction: column;
             padding: 12px 8px;
             gap: 10px;
-            min-height: 700px;
-            position: relative;
         }}
-        .header {{
-            text-align: center;
-            padding: 8px 0;
-        }}
+        .header {{ text-align: center; padding: 4px 0; }}
         .header .icon {{ font-size: 60px; }}
         .header .title {{ font-size: 20px; font-weight: bold; color: #fff; margin: 4px 0; }}
         .counter {{
-            background: #2a2a4a;
-            padding: 8px 20px;
-            border-radius: 10px;
-            font-size: 16px;
-            color: #aaa;
             text-align: center;
+            font-size: 18px;
+            color: #aaa;
+            padding: 6px 0;
         }}
-        .counter b {{ color: #fff; font-size: 28px; margin-left: 6px; }}
-        .top-btns {{
+        .counter b {{
+            color: {counter_color};
+            font-size: 30px;
+        }}
+        .controls {{
             display: flex;
-            gap: 8px;
+            gap: 6px;
         }}
-        .top-btns button {{
-            flex: 1;
+        .ctrl-btn {{
             height: 44px;
             border-radius: 10px;
-            border: none;
-            font-size: 14px;
+            border: 1px solid #555;
+            font-size: 13px;
             font-weight: bold;
             cursor: pointer;
             transition: transform 0.12s;
+            padding: 0 12px;
         }}
-        .top-btns button:active {{ transform: scale(0.95); }}
-        .btn-next {{
-            background: linear-gradient(135deg, #27ae60, #219a52);
-            color: #fff;
-            opacity: {next_opacity};
+        .ctrl-btn:active {{ transform: scale(0.95); }}
+        .btn-back {{
+            background: #262730;
+            color: #ccc;
+            flex: 0 0 auto;
         }}
+        .btn-back:hover {{ background: #3a3a4a; border-color: #ff4b4b; }}
         .btn-repeat {{
             background: #262730;
-            border: 1px solid #555 !important;
             color: #ccc;
+            flex: 0 0 auto;
         }}
-        .btn-repeat:hover {{ border-color: #ff4b4b !important; background: #3a3a4a; }}
-        .divider {{
-            border-top: 1px solid #333;
-            margin: 4px 0;
+        .btn-repeat:hover {{ background: #3a3a4a; border-color: #ff4b4b; }}
+        .btn-start {{
+            background: linear-gradient(135deg, #27ae60, #219a52);
+            color: #fff;
+            border: none;
+            flex: 1;
+            opacity: {next_opacity};
+            cursor: {next_cursor};
+            font-size: 15px;
         }}
+        .btn-start:hover {{ opacity: {next_opacity}; }}
+        .divider {{ border-top: 1px solid #333; margin: 2px 0; }}
         .grid {{
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 6px;
+            gap: 5px;
             overflow-y: auto;
-            max-height: 420px;
+            max-height: 400px;
             padding-right: 4px;
         }}
         .grid::-webkit-scrollbar {{ width: 4px; }}
         .grid::-webkit-scrollbar-thumb {{ background: #555; border-radius: 4px; }}
         .p-btn {{
-            height: 42px;
+            height: 40px;
             border-radius: 8px;
             background: #262730;
             border: 1px solid #444;
-            color: #ccc;
+            color: #999;
             font-size: 13px;
             font-weight: bold;
             cursor: pointer;
@@ -435,40 +454,79 @@ def screen_select_players():
         }}
         .p-btn .games {{
             font-size: 11px;
-            color: #888;
+            color: #666;
             font-weight: normal;
         }}
-        .back-btn {{
-            position: absolute;
-            bottom: 8px;
-            left: 8px;
-            background: #262730;
-            border: 1px solid #555;
-            color: #ccc;
-            padding: 8px 16px;
-            border-radius: 8px;
+        .p-btn.sel .games {{
+            color: #8bc78b;
+        }}
+        .add-section {{
+            margin-top: 4px;
+            border-top: 1px solid #333;
+            padding-top: 8px;
+        }}
+        .add-title {{
             font-size: 14px;
+            color: #aaa;
+            margin-bottom: 6px;
+            font-weight: bold;
+        }}
+        .add-row {{
+            display: flex;
+            gap: 6px;
+        }}
+        .add-row input {{
+            flex: 1;
+            height: 36px;
+            border-radius: 6px;
+            border: 1px solid #555;
+            background: #1a1a2e;
+            color: #fff;
+            padding: 0 8px;
+            font-size: 13px;
+            outline: none;
+        }}
+        .add-row input:focus {{ border-color: #4CAF50; }}
+        .add-row input::placeholder {{ color: #666; }}
+        .btn-add {{
+            height: 36px;
+            border-radius: 6px;
+            background: #2d5a2d;
+            border: 1px solid #4CAF50;
+            color: #fff;
+            padding: 0 14px;
+            font-size: 13px;
             font-weight: bold;
             cursor: pointer;
         }}
-        .back-btn:hover {{ background: #3a3a4a; border-color: #ff4b4b; }}
-        .back-btn:active {{ transform: scale(0.95); }}
+        .btn-add:hover {{ background: #3a6a3a; }}
+        .btn-add:active {{ transform: scale(0.95); }}
     </style>
     <div class="wrap">
         <div class="header">
             <div class="icon">👥</div>
             <div class="title">Выбор игроков</div>
         </div>
-        <div class="counter">Выбрано: <b>{count}</b></div>
-        <div class="top-btns">
-            <button class="btn-next" onclick="clickBtn('sp_Далее')" {next_disabled}>{next_label}</button>
-            {"<button class='btn-repeat' onclick=" + '"' + "clickBtn('sp_Повторить')" + '"' + ">🔄 Повторить</button>" if db.get('last_composition') else ""}
+        <div class="counter">Выбрано: <b>{count}</b> / {display_max}</div>
+        <div class="controls">
+            <button class="ctrl-btn btn-back" onclick="clickBtn('sp_Назад')">⬅️</button>
+            {repeat_html}
+            <button class="ctrl-btn btn-start" onclick="{'clickBtn(\\\'sp_Старт\\\')' if can_go else ''}" {"" if can_go else "disabled"}>
+                🚀 Старт
+            </button>
         </div>
         <div class="divider"></div>
         <div class="grid">
             {players_html}
         </div>
-        <button class="back-btn" onclick="clickBtn('sp_Назад')">⬅️ Назад</button>
+        <div class="add-section">
+            <div class="add-title">➕ Добавить игрока</div>
+            <div class="add-row">
+                <input type="text" id="qa_name" placeholder="Имя">
+                <input type="text" id="qa_nick" placeholder="Псевдоним">
+                <button class="btn-add" onclick="addPlayer()">+</button>
+            </div>
+        </div>
     </div>
     <script>
     function clickBtn(text) {{
@@ -483,8 +541,30 @@ def screen_select_players():
             }}
         }}
     }}
+    function addPlayer() {{
+        const name = document.getElementById('qa_name').value.trim();
+        const nick = document.getElementById('qa_nick').value.trim();
+        if (!name || !nick) return;
+        // Записываем в ST session через скрытые инпуты
+        const doc = window.parent.document;
+        const inputs = doc.querySelectorAll('input[type="text"]');
+        if (inputs.length >= 2) {{
+            const nameInput = inputs[inputs.length - 2];
+            const nickInput = inputs[inputs.length - 1];
+            const nativeSet = Object.getOwnPropertyDescriptor(window.parent.HTMLInputElement.prototype, 'value').set;
+            nativeSet.call(nameInput, name);
+            nameInput.dispatchEvent(new Event('input', {{ bubbles: true }}));
+            nativeSet.call(nickInput, nick);
+            nickInput.dispatchEvent(new Event('input', {{ bubbles: true }}));
+            setTimeout(() => clickBtn('sp_Добавить'), 200);
+        }}
+    }}
     </script>
     """, height=750)
+
+    # Скрытые инпуты для добавления
+    st.text_input("qa_name_hidden", key="qa_name", label_visibility="collapsed")
+    st.text_input("qa_nick_hidden", key="qa_nick", label_visibility="collapsed")
 
 
 def _finalize_players(db):
