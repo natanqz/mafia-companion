@@ -14,14 +14,14 @@ METRONOME_SOUND = "metronome.mp3"
 WHISTLE_SOUND = "whistle.mp3"
 
 # ---- STYLES ----
-def inject_gold_buttons(texts=None):
-    if texts is None:
-        texts = [
-            "Спортивная", "Ночь 0", "Наступает Утро", "Голосование", "Итоги", "К ночи",
-            "Далее → Ночь", "Далее", "Новая игра",
-            "День 2", "День 3", "День 4", "День 5",
-            "День 6", "День 7", "День 8", "День 9", "День 10",
-        ]
+# ---- STYLES ----
+def inject_styles():
+    gold_texts = [
+        "Ночь 0", "Наступает Утро", "Наступает утро", "Никого", "Голосование",
+        "Далее", "Итоги", "День 2", "День 3", "День 4", "День 5",
+        "День 6", "День 7", "День 8", "День 9", "День 10",
+        "К ночи"
+    ]
 
     st.markdown(f"""
     <style>
@@ -138,7 +138,6 @@ def inject_gold_buttons(texts=None):
     observer.observe(document.body, {{ childList: true, subtree: true }});
     </script>
     """, unsafe_allow_html=True)
-
 
 def inject_gold_buttons(texts=None):
     """Подсвечивает кнопки золотой обводкой по тексту"""
