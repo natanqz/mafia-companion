@@ -56,74 +56,57 @@ def screen_select_mode():
         go("main_menu"); st.rerun()
 
 
-
 def screen_select_players():
     db = load_db()
+
+    # Настройка ширины интерфейса
+    if "force_width" not in st.session_state:
+        st.session_state.force_width = 700
+
+    with st.expander("⚙️ Настройка ширины интерфейса"):
+        new_width = st.number_input(
+            "Минимальная ширина (px)",
+            min_value=300,
+            max_value=1200,
+            value=st.session_state.force_width,
+            step=10,
+            key="width_input"
+        )
+        if st.button("Применить", key="apply_width"):
+            st.session_state.force_width = new_width
+            st.rerun()
+        st.caption(f"Текущая: {st.session_state.force_width}px")
+
+    # Применяем ширину через CSS
+    st.markdown(f"""
+    <style>
+    .stApp {{
+        min-width: {st.session_state.force_width}px !important;
+        overflow-x: auto !important;
+    }}
+    .stMain, [data-testid="stMain"] {{
+        min-width: {st.session_state.force_width}px !important;
+        overflow-x: auto !important;
+    }}
+    .stMainBlockContainer, [data-testid="stMainBlockContainer"] {{
+        min-width: {st.session_state.force_width}px !important;
+    }}
+    [data-testid="stAppViewContainer"] {{
+        min-width: {st.session_state.force_width}px !important;
+        overflow-x: auto !important;
+    }}
+    [data-testid="stHorizontalBlock"] {{
+        flex-wrap: nowrap !important;
+    }}
+    </style>
+    """, unsafe_allow_html=True)
+
     st.markdown(
         '<div style="text-align:center;padding:20px 0 5px;">'
         '<p style="font-size:80px;margin:0;">👥</p>'
         '<p style="font-size:22px;font-weight:bold;color:#fff;">Выбор игроков</p></div>',
         unsafe_allow_html=True
     )
-    if "selected_pids" not in st.session_state:
-        st.session_state.selected_pids = []
-    if db.get('last_composition'):
-        if st.button("🔄 Повторить прошлый состав", use_container_width=True):
-            st.session_state.selected_pids = db['last_composition'][:]
-            st.rerun()
-    st.markdown("---")
-    count = len(st.session_state.selected_pids)
-    can_go = count >= 7
-
-    st.markdown(
-        f'<div style="background:#2a2a4a;padding:10px 12px;border-radius:8px;'
-        f'font-size:18px;text-align:center;color:#aaa;">'
-        f'Выбрано: <b style="color:white;font-size:24px;margin-left:8px;">{count}</b></div>',
-        unsafe_allow_html=True
-    )
-    if can_go:
-        if st.button(f"✅ Далее ({count})", use_container_width=True, key="players_next"):
-            _finalize_players(db)
-            st.rerun()
-    else:
-        st.button("Минимум 7", use_container_width=True, disabled=True, key="players_next_d")
-
-    st.markdown("---")
-
-    sorted_players = sorted(db['players'], key=lambda p: get_play_count(db, p['id']), reverse=True)
-    cols_count = 2
-    rows = math.ceil(len(sorted_players) / cols_count)
-    for r in range(rows):
-        columns = st.columns(cols_count)
-        for c in range(cols_count):
-            idx = r * cols_count + c
-            if idx >= len(sorted_players): break
-            p = sorted_players[idx]
-            with columns[c]:
-                is_sel = p['id'] in st.session_state.selected_pids
-                label = f"✅ {p['nickname']}" if is_sel else f"{p['nickname']}"
-                if st.button(label, key=f"sel_p_{idx}", use_container_width=True):
-                    if is_sel: st.session_state.selected_pids.remove(p['id'])
-                    else: st.session_state.selected_pids.append(p['id'])
-                    st.rerun()
-
-    st.markdown("---")
-    with st.expander("➕ Добавить нового игрока"):
-        c1, c2 = st.columns(2)
-        rn = c1.text_input("Имя", key="quick_add_name")
-        nn = c2.text_input("Псевдоним", key="quick_add_nick")
-        if st.button("Добавить", key="quick_add_btn"):
-            if rn and nn:
-                pid = str(uuid.uuid4())
-                db['players'].append({"id": pid, "real_name": rn.strip(), "nickname": nn.strip(), "history": []})
-                save_db(db)
-                st.success(f"✅ {rn} ({nn})")
-                st.rerun()
-    st.markdown("---")
-    if st.button("⬅️ Назад", use_container_width=True, key="players_back"):
-        go("select_mode")
-        st.rerun()
-
 
 def _finalize_players(db):
     players = []
