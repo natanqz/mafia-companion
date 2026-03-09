@@ -89,62 +89,22 @@ def screen_select_players():
 
     st.markdown("---")
 
-    # --- HTML-сетка игроков ---
     sorted_players = sorted(db['players'], key=lambda p: get_play_count(db, p['id']), reverse=True)
-
-    # Генерируем HTML кнопки
-    buttons_html = ""
-    for idx, p in enumerate(sorted_players):
-        is_sel = p['id'] in st.session_state.selected_pids
-        bg = "#2e7d32" if is_sel else "#1a1a3d"
-        border = "2px solid #4CAF50" if is_sel else "2px solid #444"
-        check = "✅ " if is_sel else ""
-        buttons_html += (
-            f'<button onclick="window.parent.postMessage({{\'streamlit:setComponentValue\': \'{p["id"]}\'}}, \'*\')" '
-            f'style="background:{bg};color:white;border:{border};border-radius:8px;'
-            f'padding:8px 4px;font-size:14px;font-weight:bold;cursor:pointer;'
-            f'width:100%;min-height:40px;margin:0;">'
-            f'{check}{p["nickname"]}</button>'
-        )
-
-    grid_html = f"""
-    <div style="
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 6px;
-        padding: 4px;
-    ">
-        {buttons_html}
-    </div>
-    """
-
-    clicked = components.html(
-        f"""
-        <div id="grid">{grid_html.replace('<div style="', '<div style="')}</div>
-        <script>
-        let clicked = null;
-        document.querySelectorAll('button').forEach(btn => {{
-            btn.addEventListener('click', () => {{
-                const pid = btn.getAttribute('data-pid');
-            }});
-        }});
-        </script>
-        """,
-        height=max(200, (len(sorted_players) // 2 + 1) * 50),
-    )
-
-    # Фолбэк — обычные кнопки по одной в строку для обработки кликов
-    st.markdown('<div style="display:none;">', unsafe_allow_html=True)
-    for idx, p in enumerate(sorted_players):
-        is_sel = p['id'] in st.session_state.selected_pids
-        label = f"✅ {p['nickname']}" if is_sel else p['nickname']
-        if st.button(label, key=f"sel_p_{idx}", use_container_width=True):
-            if is_sel:
-                st.session_state.selected_pids.remove(p['id'])
-            else:
-                st.session_state.selected_pids.append(p['id'])
-            st.rerun()
-    st.markdown('</div>', unsafe_allow_html=True)
+    cols_count = 2
+    rows = math.ceil(len(sorted_players) / cols_count)
+    for r in range(rows):
+        columns = st.columns(cols_count)
+        for c in range(cols_count):
+            idx = r * cols_count + c
+            if idx >= len(sorted_players): break
+            p = sorted_players[idx]
+            with columns[c]:
+                is_sel = p['id'] in st.session_state.selected_pids
+                label = f"✅ {p['nickname']}" if is_sel else f"{p['nickname']}"
+                if st.button(label, key=f"sel_p_{idx}", use_container_width=True):
+                    if is_sel: st.session_state.selected_pids.remove(p['id'])
+                    else: st.session_state.selected_pids.append(p['id'])
+                    st.rerun()
 
     st.markdown("---")
     with st.expander("➕ Добавить нового игрока"):
@@ -159,6 +119,8 @@ def screen_select_players():
     st.markdown("---")
     if st.button("⬅️ Назад", use_container_width=True, key="players_back"):
         go("select_mode"); st.rerun()
+
+
 
 def _finalize_players(db):
     players = []

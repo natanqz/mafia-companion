@@ -95,6 +95,14 @@ def inject_styles():
     .fs-civil {{ background: #cc0000; color: #fff; }}
     .fs-sheriff-found {{ background: #00aa00; color: #fff; }}
     .fs-civil-for-don {{ background: #cc0000; color: #fff; }}
+
+    /* Принудительно горизонтальные колонки */
+    [data-testid="stHorizontalBlock"] {{
+        flex-wrap: nowrap !important;
+    }}
+    [data-testid="column"] {{
+        min-width: 0 !important;
+    }}
     </style>
 
     <script>
@@ -120,6 +128,8 @@ def inject_styles():
     observer.observe(document.body, {{ childList: true, subtree: true }});
     </script>
     """, unsafe_allow_html=True)
+
+
 
 def inject_gold_buttons(texts=None):
     if texts is None:
