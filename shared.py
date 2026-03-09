@@ -15,23 +15,6 @@ WHISTLE_SOUND = "whistle.mp3"
 
 # ---- STYLES ----
 def inject_styles():
-    # Принудительный viewport — телефон думает что экран 800px
-    components.html("""
-    <script>
-    (function() {
-        var meta = window.parent.document.querySelector('meta[name="viewport"]');
-        if (meta) {
-            meta.setAttribute('content', 'width=800, initial-scale=0.5, user-scalable=yes');
-        } else {
-            meta = document.createElement('meta');
-            meta.name = 'viewport';
-            meta.content = 'width=800, initial-scale=0.5, user-scalable=yes';
-            window.parent.document.head.appendChild(meta);
-        }
-    })();
-    </script>
-    """, height=0)
-
     st.markdown("""
     <style>
     div.stButton > button {
@@ -48,50 +31,6 @@ def inject_styles():
         margin: 0;
         padding: 10px;
     }
-    .player-bar {
-        height: 40px;
-        display: flex;
-        align-items: center;
-        padding: 4px 12px;
-        margin: 2px 0;
-        border-radius: 6px;
-        font-size: 16px;
-        font-weight: bold;
-        position: relative;
-        overflow: hidden;
-    }
-    .player-bar .progress-fill {
-        position: absolute;
-        left: 0; top: 0; bottom: 0;
-        background: rgba(76, 175, 80, 0.3);
-        z-index: 0;
-        border-radius: 6px;
-    }
-    .player-bar .content {
-        position: relative;
-        z-index: 1;
-        width: 100%;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-    }
-    .player-row-dead {
-        height: 20px;
-        display: flex;
-        align-items: center;
-        padding: 2px 8px;
-        margin: 1px 0;
-        border-radius: 4px;
-        font-size: 12px;
-        opacity: 0.4;
-        text-decoration: line-through;
-    }
-    .counter-bar {
-        position: sticky; top: 0; background: #1a1a1a;
-        padding: 10px; z-index: 100; text-align: center;
-        font-size: 24px; font-weight: bold; color: white;
-        border-bottom: 2px solid #444;
-    }
     .fullscreen-msg {
         width: 100%;
         padding: 60px 20px;
@@ -107,6 +46,7 @@ def inject_styles():
     .fs-civil-for-don { background: #cc0000; color: #fff; }
     </style>
     """, unsafe_allow_html=True)
+
 
 
 

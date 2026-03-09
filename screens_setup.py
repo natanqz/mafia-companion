@@ -90,21 +90,25 @@ def screen_select_players():
     st.markdown("---")
 
     sorted_players = sorted(db['players'], key=lambda p: get_play_count(db, p['id']), reverse=True)
-    cols_count = 2
-    rows = math.ceil(len(sorted_players) / cols_count)
-    for r in range(rows):
-        columns = st.columns(cols_count)
-        for c in range(cols_count):
-            idx = r * cols_count + c
-            if idx >= len(sorted_players): break
-            p = sorted_players[idx]
-            with columns[c]:
-                is_sel = p['id'] in st.session_state.selected_pids
-                label = f"✅ {p['nickname']}" if is_sel else f"{p['nickname']}"
-                if st.button(label, key=f"sel_p_{idx}", use_container_width=True):
-                    if is_sel: st.session_state.selected_pids.remove(p['id'])
-                    else: st.session_state.selected_pids.append(p['id'])
-                    st.rerun()
+
+    # Компактные кнопки — уменьшаем отступы только для этого блока
+    st.markdown("""
+    <style>
+    .compact-players .stButton { margin: -8px 0 !important; }
+    .compact-players .stButton button { height: 36px !important; }
+    </style>
+    """, unsafe_allow_html=True)
+
+    with st.container():
+        for idx, p in enumerate(sorted_players):
+            is_sel = p['id'] in st.session_state.selected_pids
+            label = f"✅ {p['nickname']}" if is_sel else f"⬜ {p['nickname']}"
+            if st.button(label, key=f"sel_p_{idx}", use_container_width=True):
+                if is_sel:
+                    st.session_state.selected_pids.remove(p['id'])
+                else:
+                    st.session_state.selected_pids.append(p['id'])
+                st.rerun()
 
     st.markdown("---")
     with st.expander("➕ Добавить нового игрока"):
@@ -122,6 +126,7 @@ def screen_select_players():
     if st.button("⬅️ Назад", use_container_width=True, key="players_back"):
         go("select_mode")
         st.rerun()
+
 
 
 
