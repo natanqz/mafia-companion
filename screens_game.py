@@ -31,7 +31,29 @@ def screen_game_day():
 
     phase = st.session_state.day_phase
     all_done = speaker_idx >= len(order)
+    show_roles = st.session_state.get("show_roles", False)
 
+    # --- Хелперы форматирования ---
+    def fmt_num(p):
+        """Номер: -5- или -5-⭐"""
+        base = f"-{p['number']}-"
+        if show_roles and p.get('role'):
+            base += role_emoji(p['role'])
+        return base
+
+    def fmt_full(p):
+        """Полное: -5- Князь или -5-⭐ Князь (Шериф)"""
+        num = fmt_num(p)
+        nick = p['nickname']
+        if show_roles and p.get('role'):
+            return f"{num} {nick} ({p['role']})"
+        return f"{num} {nick}"
+
+    def fmt_grid(p):
+        """Для сетки: -5- или -5-⭐"""
+        return fmt_num(p)
+
+    # --- Текущий и следующий ---
     is_first_speaker = False
     is_last_speaker = False
     if not all_done:
@@ -39,14 +61,14 @@ def screen_game_day():
         is_first_speaker = (speaker_idx == 0)
         is_last_speaker = (speaker_idx == len(order) - 1)
         if is_first_speaker:
-            current_label = f"📢 Открывает стол #{current['number']} {current['nickname']}"
+            current_label = f"📢 Открывает стол {fmt_full(current)}"
         elif is_last_speaker:
-            current_label = f"🔒 Закрывает стол #{current['number']} {current['nickname']}"
+            current_label = f"🔒 Закрывает стол {fmt_full(current)}"
         else:
-            current_label = f"🗣️ Говорит #{current['number']} {current['nickname']}"
+            current_label = f"🗣️ Говорит {fmt_full(current)}"
         if speaker_idx + 1 < len(order):
             nxt = order[speaker_idx + 1]
-            next_label = f"Готовится #{nxt['number']} {nxt['nickname']}"
+            next_label = f"Готовится {fmt_full(nxt)}"
         else:
             next_label = ""
     else:
@@ -63,7 +85,7 @@ def screen_game_day():
     else:
         timer_color = "#ff2222"
 
-    # --- Главная кнопка / кнопки all_done ---
+    # --- Главная кнопка ---
     if all_done:
         has_nominees = bool(st.session_state.get("nominees"))
         if has_nominees:
@@ -80,35 +102,22 @@ def screen_game_day():
             """
     elif phase == "idle":
         cur = order[speaker_idx]
+        label = f"▶️ Старт {fmt_full(cur)}"
         if is_first_speaker or is_last_speaker:
-            main_btn_html = f'<button class="main-btn-special" onclick="clickDay(\'day_Старт\')">▶️ Старт #{cur["number"]} {cur["nickname"]}</button>'
+            main_btn_html = f'<button class="main-btn-special" onclick="clickDay(\'day_Старт\')">{label}</button>'
         else:
-            main_btn_html = f'<button class="main-btn-start" onclick="clickDay(\'day_Старт\')">▶️ Старт #{cur["number"]} {cur["nickname"]}</button>'
+            main_btn_html = f'<button class="main-btn-start" onclick="clickDay(\'day_Старт\')">{label}</button>'
     else:
         main_btn_html = '<button class="main-btn-thanks" onclick="clickDay(\'day_Спасибо\')">🙏 Спасибо</button>'
 
     sorted_all = sorted(players, key=lambda p: p['number'])
     order_nums = [p['number'] for p in order]
-    bars_html = _build_bars_html(sorted_all, order_nums, speaker_idx, phase, remaining)
-    nom_grid_html = _build_nom_grid(sorted_all, day)
-    nom_summary_html = _build_nom_summary(players)
-    fouls_grid_html = _build_fouls_grid(sorted_all, day)
+    bars_html = _build_bars_html(sorted_all, order_nums, speaker_idx, phase, remaining, fmt_num, fmt_full, show_roles)
+    nom_grid_html = _build_nom_grid(sorted_all, day, fmt_grid)
+    nom_summary_html = _build_nom_summary(players, fmt_num, fmt_full)
+    fouls_grid_html = _build_fouls_grid(sorted_all, day, fmt_grid)
 
-    # --- Roles ---
-    show_roles = st.session_state.get("show_roles", False)
     roles_label = "🙈 Скрыть роли" if show_roles else "👁️ Показать роли"
-    roles_html = ""
-    if show_roles:
-        for p in sorted_all:
-            emoji = role_emoji(p['role']) if p.get('role') else "❓"
-            if p['role'] in ['Дон', 'Мафия']:
-                rc = "#ff4444"
-            elif p['role'] == 'Шериф':
-                rc = "#4488ff"
-            else:
-                rc = "#888"
-            dead_style = "opacity:0.4;text-decoration:line-through;" if p['status'] == 'dead' else ""
-            roles_html += f'<div style="padding:2px 8px;font-size:13px;color:{rc};{dead_style}">{emoji} #{p["number"]} {p["nickname"]} — {p.get("role","?")}</div>'
 
     components.html(f"""
     <style>
@@ -187,7 +196,7 @@ def screen_game_day():
         .grid {{ display:flex; flex-wrap:wrap; gap:4px; }}
         .grid-btn {{
             flex:0 0 18%; height:36px; border-radius:6px;
-            font-size:12px; font-weight:bold; cursor:pointer;
+            font-size:11px; font-weight:bold; cursor:pointer;
             border:1px solid #555; background:#262730; color:#ccc;
         }}
         .grid-btn:active {{ transform:scale(0.95); }}
@@ -221,7 +230,6 @@ def screen_game_day():
             font-size:13px; font-weight:bold; cursor:pointer;
         }}
         .btn-roles:active {{ transform:scale(0.95); }}
-        .roles-list {{ padding:4px 0; }}
     </style>
 
     <div class="wrap">
@@ -259,7 +267,6 @@ def screen_game_day():
         <div class="divider"></div>
 
         <button class="btn-roles" onclick="clickDay('day_Роли')">{roles_label}</button>
-        <div class="roles-list">{roles_html}</div>
     </div>
 
     <script>
@@ -275,7 +282,7 @@ def screen_game_day():
         }}
     }}
     </script>
-    """, height=_calc_day_height(players, all_done, st.session_state.get("nominees"), show_roles))
+    """, height=_calc_day_height(players, all_done, st.session_state.get("nominees")))
 
     # === Скрытые ST-кнопки ===
     if st.button("day_Старт", key="day_start"):
@@ -319,7 +326,7 @@ def screen_game_day():
             if not all_done and speaker_idx < len(order) and p['status'] == 'alive':
                 by_num = order[speaker_idx]['number']
                 st.session_state.nominees[by_num] = p['number']
-                st.session_state.game_log.append(f"День {day}: #{by_num} → #{p['number']}")
+                st.session_state.game_log.append(f"День {day}: -{by_num}- → -{p['number']}-")
             st.rerun()
 
     for p in sorted_all:
@@ -369,11 +376,11 @@ def screen_game_day():
     """, height=0)
 
 
-def _build_bars_html(sorted_all, order_nums, speaker_idx, phase, remaining):
+def _build_bars_html(sorted_all, order_nums, speaker_idx, phase, remaining, fmt_num, fmt_full, show_roles):
     html = ""
     for p in sorted_all:
         foul_dots = "❗" * p['fouls'] if p['fouls'] > 0 else ""
-        name = f"#{p['number']} {p['nickname']}"
+        name = fmt_full(p)
 
         if p['status'] == 'dead':
             html += (
@@ -422,22 +429,23 @@ def _build_bars_html(sorted_all, order_nums, speaker_idx, phase, remaining):
     return html
 
 
-def _build_nom_grid(sorted_all, day):
+def _build_nom_grid(sorted_all, day, fmt_grid):
     nominated_nums = list(st.session_state.get("nominees", {}).values())
     html = ""
     for p in sorted_all:
         is_dead = p['status'] == 'dead'
         is_nom = p['number'] in nominated_nums
+        label = fmt_grid(p)
         if is_dead:
-            html += f'<button class="grid-btn dead" disabled>#{p["number"]}</button>'
+            html += f'<button class="grid-btn dead" disabled>{label}</button>'
         elif is_nom:
-            html += f'<button class="grid-btn selected" onclick="clickDay(\'day_nom_{p["number"]}\')">🗳️#{p["number"]}</button>'
+            html += f'<button class="grid-btn selected" onclick="clickDay(\'day_nom_{p["number"]}\')">🗳️{label}</button>'
         else:
-            html += f'<button class="grid-btn" onclick="clickDay(\'day_nom_{p["number"]}\')">#{p["number"]}</button>'
+            html += f'<button class="grid-btn" onclick="clickDay(\'day_nom_{p["number"]}\')">{label}</button>'
     return html
 
 
-def _build_nom_summary(players):
+def _build_nom_summary(players, fmt_num, fmt_full):
     nominees = st.session_state.get("nominees", {})
     if not nominees:
         return ""
@@ -450,28 +458,29 @@ def _build_nom_summary(players):
         by_strs = []
         for bn in by_list:
             bp = next((x for x in players if x['number'] == bn), None)
-            by_strs.append(f"#{bp['number']}" if bp else f"#{bn}")
-        who_str = f"#{who_p['number']} {who_p['nickname']}" if who_p else f"#{who_n}"
+            by_strs.append(fmt_num(bp) if bp else f"-{bn}-")
+        who_str = fmt_full(who_p) if who_p else f"-{who_n}-"
         html += f'<div class="nom-summary">🗳️ <b>{who_str}</b> ← {", ".join(by_strs)}</div>'
     return html
 
 
-def _build_fouls_grid(sorted_all, day):
+def _build_fouls_grid(sorted_all, day, fmt_grid):
     html = ""
     for p in sorted_all:
         is_dead = p['status'] == 'dead'
         foul_dots = "❗" * p['fouls'] if p['fouls'] > 0 else ""
         at_max = p['fouls'] >= 4
+        label = fmt_grid(p)
         if is_dead:
-            html += f'<button class="grid-btn dead" disabled>#{p["number"]}</button>'
+            html += f'<button class="grid-btn dead" disabled>{label}</button>'
         elif at_max:
-            html += f'<button class="grid-btn foul-max" disabled>🚫#{p["number"]}</button>'
+            html += f'<button class="grid-btn foul-max" disabled>🚫{label}</button>'
         else:
-            html += f'<button class="grid-btn foul-btn" onclick="clickDay(\'day_foul_{p["number"]}\')">{foul_dots}#{p["number"]}</button>'
+            html += f'<button class="grid-btn foul-btn" onclick="clickDay(\'day_foul_{p["number"]}\')">{foul_dots}{label}</button>'
     return html
 
 
-def _calc_day_height(players, all_done, nominees, show_roles=False):
+def _calc_day_height(players, all_done, nominees):
     n = len(players)
     h = 500
     h += n * 44
@@ -484,10 +493,10 @@ def _calc_day_height(players, all_done, nominees, show_roles=False):
     if all_done:
         h += 70
     h += 60
-    if show_roles:
-        h += n * 28
     h += 120
     return h
+
+
 
 
 def _reset_day():
