@@ -482,15 +482,6 @@ def _calc_day_height(players, all_done, nominees):
     return h
 
 
-def _get_remaining():
-    if st.session_state.get("timer_paused"):
-        return st.session_state.get("timer_paused_remaining", 60)
-    if st.session_state.get("timer_start_time") is None:
-        return st.session_state.get("timer_duration", 60)
-    elapsed = time.time() - st.session_state.timer_start_time
-    return max(0, st.session_state.timer_duration - int(elapsed))
-
-
 def _reset_day():
     st.session_state.day_phase = "idle"
     st.session_state.timer_start_time = None
@@ -546,20 +537,6 @@ def _run_day_live():
         time.sleep(1)
 
 
-def _render_nominees_summary(all_players):
-    grouped = {}
-    for by_n, who_n in st.session_state.nominees.items():
-        grouped.setdefault(who_n, []).append(by_n)
-    for who_n, by_list in grouped.items():
-        who_p = next((x for x in all_players if x['number'] == who_n), None)
-        by_strs = []
-        for bn in by_list:
-            bp = next((x for x in all_players if x['number'] == bn), None)
-            by_strs.append(p_num(bp) if bp else f"#{bn}")
-        who_str = p_num(who_p) if who_p else f"#{who_n}"
-        st.write(f"**{who_str}** — выставлен: {', '.join(by_strs)}")
-
-
 def _get_remaining():
     if st.session_state.get("timer_paused"):
         return st.session_state.get("timer_paused_remaining", 60)
@@ -567,161 +544,6 @@ def _get_remaining():
         return st.session_state.get("timer_duration", 60)
     elapsed = time.time() - st.session_state.timer_start_time
     return max(0, st.session_state.timer_duration - int(elapsed))
-
-
-def _draw_timer_only(ph, sec):
-    color = "white" if sec > 10 else "red"
-    ph.markdown(f'<p style="font-size:80px;text-align:center;font-weight:bold;margin:0;padding:0;color:{color};line-height:1;">{sec}</p>', unsafe_allow_html=True)
-
-
-def _draw_player_bars(container, all_players, order, speaker_idx):
-    phase = st.session_state.get("day_phase", "idle")
-    sorted_all = sorted(all_players, key=lambda p: p['number'])
-    order_nums = [p['number'] for p in order]
-    html = []
-    for p in sorted_all:
-        foul_dots = "❗" * p['fouls'] if p['fouls'] > 0 else ""
-        if p['status'] == 'dead':
-            html.append(f'<div style="height:32px;display:flex;align-items:center;padding:2px 12px;margin:2px 0;border-radius:6px;background:#111;color:#555;font-size:14px;text-decoration:line-through;">{p_bar_text(p)} 💀<span style="margin-left:auto;">{foul_dots}</span></div>')
-            continue
-
-        pos = order_nums.index(p['number']) if p['number'] in order_nums else 999
-
-        if pos < speaker_idx:
-            progress = 100; bg = "#1a2e1a"; bar_color = "rgba(76,175,80,0.2)"; prefix = ""
-        elif pos == speaker_idx:
-            if phase == "speaking" and st.session_state.timer_start_time:
-                elapsed = time.time() - st.session_state.timer_start_time
-                total = st.session_state.timer_duration
-                progress = min(100, int((elapsed / max(total, 1)) * 100))
-            elif phase == "speaking" and st.session_state.get("timer_paused"):
-                rem = st.session_state.get("timer_paused_remaining", 60)
-                progress = min(100, int(((60 - rem) / 60) * 100))
-            else:
-                progress = 0
-            bg = "#1a3a1a"; bar_color = "rgba(76,175,80,0.5)"; prefix = ""
-        else:
-            progress = 0; bg = "#1a1a3d"; bar_color = "transparent"; prefix = ""
-
-        html.append(f'''<div style="height:40px;display:flex;align-items:center;padding:4px 12px;margin:2px 0;border-radius:6px;font-size:16px;font-weight:bold;position:relative;overflow:hidden;background:{bg};color:white;">
-            <div style="position:absolute;left:0;top:0;bottom:0;width:{progress}%;background:{bar_color};border-radius:6px;z-index:0;"></div>
-            <div style="position:relative;z-index:1;width:100%;display:flex;justify-content:space-between;">
-                <span>{prefix}{p_bar_text(p)}</span><span>{foul_dots}</span>
-            </div></div>''')
-    container.markdown("\n".join(html), unsafe_allow_html=True)
-
-
-def _run_live_loop(timer_display, live_zone, all_players, order, speaker_idx):
-    start = st.session_state.timer_start_time
-    total = st.session_state.timer_duration
-    if not start: return
-    while True:
-        elapsed = time.time() - start
-        sec = max(0, total - int(elapsed))
-        _draw_timer_only(timer_display, sec)
-        _draw_player_bars(live_zone, all_players, order, speaker_idx)
-        if sec <= 10 and sec > 0: play_sound_html(METRONOME_SOUND)
-        if sec == 0: play_sound_html(WHISTLE_SOUND)
-        time.sleep(2)
-        break
-
-
-
-def _next_speaker():
-    st.session_state.current_speaker += 1
-    st.session_state.day_phase = "idle"
-    st.session_state.timer_start_time = None
-    st.session_state.timer_duration = 60
-    st.session_state.timer_paused = False
-    st.session_state.timer_paused_remaining = 60
-
-
-
-def _render_fouls(all_players, day):
-    st.markdown("### ⚠️ Фолы")
-    sorted_all = sorted(all_players, key=lambda p: p['number'])
-    n = len(sorted_all)
-    rows = math.ceil(n / GRID_COLS)
-    for r in range(rows):
-        cols = st.columns(GRID_COLS)
-        for c in range(GRID_COLS):
-            idx = r * GRID_COLS + c
-            if idx >= n: break
-            p = sorted_all[idx]
-            with cols[c]:
-                is_dead = p['status'] == 'dead'
-                at_max = p['fouls'] >= 4
-                foul_dots = "❗" * p['fouls'] if p['fouls'] > 0 else ""
-                if is_dead:
-                    label = f"💀{p_num(p)}"
-                elif at_max:
-                    label = f"🚫{p_num(p)}"
-                else:
-                    label = f"{p_num(p)}{foul_dots}"
-                if st.button(label, key=f"foul_{day}_{p['number']}", disabled=at_max, use_container_width=True):
-                    if not is_dead and p['fouls'] < 4:
-                        p['fouls'] += 1
-                        if p['fouls'] >= 4: st.toast(f"🚫 {p_num(p)} — 4 фола!")
-                    st.rerun()
-
-
-def _render_nominations(all_players, order, speaker_idx, day):
-    all_done = speaker_idx >= len(order)
-    if not all_done:
-        st.markdown("### 🗳️ Выставление на голосование")
-        if speaker_idx < len(order):
-            current = order[speaker_idx]
-            st.caption(f"Выставляет: {p_num(current)} {p_name(current)}")
-
-        sorted_all = sorted(all_players, key=lambda p: p['number'])
-        n = len(sorted_all)
-        rows = math.ceil(n / GRID_COLS)
-        for r in range(rows):
-            cols = st.columns(GRID_COLS)
-            for c in range(GRID_COLS):
-                idx = r * GRID_COLS + c
-                if idx >= n: break
-                p = sorted_all[idx]
-                with cols[c]:
-                    is_dead = p['status'] == 'dead'
-                    nominated_nums = list(st.session_state.nominees.values())
-                    is_nom = p['number'] in nominated_nums
-                    if is_dead:
-                        st.button(p_num(p), key=f"nom_{day}_{p['number']}", disabled=True, use_container_width=True)
-                    else:
-                        label = f"{'🗳️' if is_nom else ''}{p_num(p)}"
-                        if st.button(label, key=f"nom_{day}_{p['number']}", use_container_width=True):
-                            if speaker_idx < len(order):
-                                by_num = order[speaker_idx]['number']
-                                st.session_state.nominees[by_num] = p['number']
-                                st.session_state.game_log.append(f"День {day}: #{by_num} → #{p['number']}")
-                            st.rerun()
-
-        if st.session_state.nominees:
-            st.markdown("**Выставлены:**")
-            _render_nominees_summary(all_players)
-
-
-def _render_bottom_buttons(day):
-    st.markdown("---")
-    c1, c2 = st.columns(2)
-    with c1:
-        if st.button("❌ Никого → Ночь", use_container_width=True, key="btn_no_vote"):
-            st.session_state.game_log.append(f"День {day}: никого")
-            _reset_day(); go("game_night"); st.rerun()
-    with c2:
-        if st.session_state.nominees:
-            if st.button("🗳️ Голосование", use_container_width=True, key="btn_vote"):
-                st.session_state.vote_voters = {}; st.session_state.vote_step = 0
-                _reset_day(); go("game_vote"); st.rerun()
-
-
-def _reset_day():
-    st.session_state.day_phase = "idle"
-    st.session_state.timer_start_time = None
-    st.session_state.timer_duration = 60
-    st.session_state.timer_paused = False
-    st.session_state.timer_paused_remaining = 60
 
 
 # ====== VOTING ======
