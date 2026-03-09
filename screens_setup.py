@@ -269,29 +269,57 @@ def screen_select_mode():
 
 
 def screen_select_players():
+    import streamlit.components.v1 as components
     db = load_db()
-    st.markdown(
-        '<div style="text-align:center;padding:20px 0 5px;">'
-        '<p style="font-size:80px;margin:0;">👥</p>'
-        '<p style="font-size:22px;font-weight:bold;color:#fff;">Выбор игроков</p></div>',
-        unsafe_allow_html=True
-    )
+
     if "selected_pids" not in st.session_state:
         st.session_state.selected_pids = []
-    if db.get('last_composition'):
-        if st.button("🔄 Повторить прошлый состав", use_container_width=True):
-            st.session_state.selected_pids = db['last_composition'][:]
-            st.rerun()
-    st.markdown("---")
+
     count = len(st.session_state.selected_pids)
     can_go = count >= 7
 
-    st.markdown(
-        f'<div style="background:#2a2a4a;padding:10px 12px;border-radius:8px;'
-        f'font-size:18px;text-align:center;color:#aaa;">'
-        f'Выбрано: <b style="color:white;font-size:24px;margin-left:8px;">{count}</b></div>',
-        unsafe_allow_html=True
-    )
+    # HTML шапка
+    components.html(f"""
+    <style>
+        * {{ margin: 0; padding: 0; box-sizing: border-box; }}
+        body {{ background: transparent; font-family: -apple-system, sans-serif; }}
+        .wrap {{
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 16px 10px 8px;
+            gap: 8px;
+        }}
+        .icon {{ font-size: 60px; }}
+        .title {{ font-size: 20px; font-weight: bold; color: #fff; }}
+        .counter {{
+            background: #2a2a4a;
+            padding: 8px 24px;
+            border-radius: 10px;
+            font-size: 16px;
+            color: #aaa;
+            text-align: center;
+        }}
+        .counter b {{
+            color: #fff;
+            font-size: 28px;
+            margin-left: 6px;
+        }}
+    </style>
+    <div class="wrap">
+        <div class="icon">👥</div>
+        <div class="title">Выбор игроков</div>
+        <div class="counter">Выбрано: <b>{count}</b></div>
+    </div>
+    """, height=160)
+
+    # Повторить прошлый состав
+    if db.get('last_composition'):
+        if st.button("🔄 Повторить прошлый состав", use_container_width=True, key="repeat_comp"):
+            st.session_state.selected_pids = db['last_composition'][:]
+            st.rerun()
+
+    # Кнопка Далее
     if can_go:
         if st.button(f"✅ Далее ({count})", use_container_width=True, key="players_next"):
             _finalize_players(db)
@@ -301,24 +329,38 @@ def screen_select_players():
 
     st.markdown("---")
 
+    # Список игроков — 2 колонки, компактные кнопки
     sorted_players = sorted(db['players'], key=lambda p: get_play_count(db, p['id']), reverse=True)
+
+    # Генерируем HTML-сетку + скрытые ST-кнопки
     cols_count = 2
     rows = math.ceil(len(sorted_players) / cols_count)
     for r in range(rows):
         columns = st.columns(cols_count)
         for c in range(cols_count):
             idx = r * cols_count + c
-            if idx >= len(sorted_players): break
+            if idx >= len(sorted_players):
+                break
             p = sorted_players[idx]
             with columns[c]:
                 is_sel = p['id'] in st.session_state.selected_pids
-                label = f"✅ {p['nickname']}" if is_sel else f"⬜ {p['nickname']}"
+                games = get_play_count(db, p['id'])
+                if is_sel:
+                    label = f"✅ {p['nickname']}"
+                else:
+                    label = f"⬜ {p['nickname']}"
+                if games > 0:
+                    label += f" ({games})"
                 if st.button(label, key=f"sel_p_{idx}", use_container_width=True):
-                    if is_sel: st.session_state.selected_pids.remove(p['id'])
-                    else: st.session_state.selected_pids.append(p['id'])
+                    if is_sel:
+                        st.session_state.selected_pids.remove(p['id'])
+                    else:
+                        st.session_state.selected_pids.append(p['id'])
                     st.rerun()
 
     st.markdown("---")
+
+    # Добавить нового игрока — компактная форма через HTML + ST
     with st.expander("➕ Добавить нового игрока"):
         c1, c2 = st.columns(2)
         rn = c1.text_input("Имя", key="quick_add_name")
@@ -326,15 +368,20 @@ def screen_select_players():
         if st.button("Добавить", key="quick_add_btn"):
             if rn and nn:
                 pid = str(uuid.uuid4())
-                db['players'].append({"id": pid, "real_name": rn.strip(), "nickname": nn.strip(), "history": []})
+                db['players'].append({
+                    "id": pid,
+                    "real_name": rn.strip(),
+                    "nickname": nn.strip(),
+                    "history": []
+                })
                 save_db(db)
                 st.success(f"✅ {rn} ({nn})")
                 st.rerun()
+
     st.markdown("---")
     if st.button("⬅️ Назад", use_container_width=True, key="players_back"):
         go("select_mode")
         st.rerun()
-
 
 
 

@@ -75,6 +75,20 @@ def inject_styles():
     .fs-civil { background: #cc0000; color: #fff; }
     .fs-sheriff-found { background: #00aa00; color: #fff; }
     .fs-civil-for-don { background: #cc0000; color: #fff; }
+    
+    
+        /* Ещё компактнее вертикальные gap между кнопками */
+    div[data-testid="stVerticalBlock"] > div[data-testid="stVerticalBlockBorderWrapper"] {
+        padding-top: 0 !important;
+        padding-bottom: 0 !important;
+    }
+    div[data-testid="stHorizontalBlock"] {
+        margin-top: 0 !important;
+        margin-bottom: 0 !important;
+        gap: 4px !important;
+    }
+    
+    
     </style>
     """, unsafe_allow_html=True)
 
