@@ -289,7 +289,24 @@ def screen_select_players():
     else:
         counter_bg = "#8b7500"; counter_text = f"{count} игроков"; counter_sub = "можно начать"
 
-    # === HTML ===
+    # Логика цветов кнопок
+    if can_go:
+        back_style = "background:#262730;color:#ccc;border:1px solid #555;"
+        repeat_style = "background:#262730;color:#ccc;border:1px solid #555;"
+        start_style = "background:linear-gradient(135deg,#27ae60,#219a52);color:#fff;border:none;"
+        start_disabled = ""
+        start_onclick = "clickSP('sp_Старт')"
+    else:
+        back_style = "background:#262730;color:#ccc;border:1px solid #555;"
+        if db.get('last_composition'):
+            repeat_style = "background:linear-gradient(135deg,#27ae60,#219a52);color:#fff;border:none;"
+        else:
+            repeat_style = "background:#262730;color:#666;border:1px solid #444;"
+        start_style = "background:#262730;color:#666;border:1px solid #444;opacity:0.35;"
+        start_disabled = "disabled"
+        start_onclick = ""
+
+    # Генерируем HTML игроков
     players_html = ""
     for idx, p in enumerate(sorted_players):
         is_sel = p['id'] in st.session_state.selected_pids
@@ -302,74 +319,169 @@ def screen_select_players():
             f'{check}{p["nickname"]} {games_str}</button>\n'
         )
 
-    repeat_html = ""
-    if db.get('last_composition'):
-        repeat_html = '<button class="ctrl-btn btn-repeat" onclick="clickSP(\'sp_Повтор\')">🔄</button>'
-
-    next_opacity = "1" if can_go else "0.35"
-    next_cursor = "pointer" if can_go else "not-allowed"
-    start_onclick = "clickSP('sp_Старт')" if can_go else ""
-
     components.html(f"""
     <style>
         * {{ margin: 0; padding: 0; box-sizing: border-box; }}
         body {{ background: transparent; font-family: -apple-system, sans-serif; }}
-        .wrap {{ display: flex; flex-direction: column; padding: 10px 8px; gap: 8px; }}
-        .header {{ text-align: center; padding: 4px 0; }}
-        .header .icon {{ font-size: 56px; }}
-        .header .title {{ font-size: 20px; font-weight: bold; color: #fff; margin: 2px 0; }}
-        .counter {{ text-align: center; padding: 10px 16px; border-radius: 12px; background: {counter_bg}; }}
-        .counter .num {{ font-size: 32px; font-weight: bold; color: #fff; }}
-        .counter .sub {{ font-size: 13px; color: rgba(255,255,255,0.7); margin-top: 2px; }}
-        .controls {{ display: flex; gap: 6px; }}
+        .wrap {{
+            display: flex;
+            flex-direction: column;
+            padding: 10px 8px;
+            gap: 8px;
+        }}
+        .header {{
+            text-align: center;
+            padding: 4px 0;
+        }}
+        .header .icon {{
+            font-size: 56px;
+        }}
+        .header .title {{
+            font-size: 20px;
+            font-weight: bold;
+            color: #fff;
+            margin: 2px 0;
+        }}
+        .counter {{
+            text-align: center;
+            padding: 10px 16px;
+            border-radius: 12px;
+            background: {counter_bg};
+        }}
+        .counter .num {{
+            font-size: 32px;
+            font-weight: bold;
+            color: #fff;
+        }}
+        .counter .sub {{
+            font-size: 13px;
+            color: rgba(255,255,255,0.7);
+            margin-top: 2px;
+        }}
+        .controls {{
+            display: flex;
+            gap: 6px;
+        }}
         .ctrl-btn {{
-            height: 44px; border-radius: 10px; border: 1px solid #555;
-            font-size: 14px; font-weight: bold; cursor: pointer;
-            transition: transform 0.12s; padding: 0 14px;
+            flex: 1;
+            height: 44px;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.12s;
+            padding: 0 8px;
         }}
-        .ctrl-btn:active {{ transform: scale(0.95); }}
-        .btn-back {{ background: #262730; color: #ccc; }}
-        .btn-back:hover {{ background: #3a3a4a; border-color: #ff4b4b; }}
-        .btn-repeat {{ background: #262730; color: #ccc; }}
-        .btn-repeat:hover {{ background: #3a3a4a; border-color: #ff4b4b; }}
-        .btn-start {{
-            background: linear-gradient(135deg, #27ae60, #219a52);
-            color: #fff; border: none; flex: 1;
-            opacity: {next_opacity}; cursor: {next_cursor}; font-size: 15px;
+        .ctrl-btn:active {{
+            transform: scale(0.95);
         }}
-        .divider {{ border-top: 1px solid #333; margin: 2px 0; }}
+        .ctrl-btn:hover {{
+            filter: brightness(1.15);
+        }}
+        .divider {{
+            border-top: 1px solid #333;
+            margin: 2px 0;
+        }}
         .grid {{
-            display: grid; grid-template-columns: 1fr 1fr; gap: 5px;
-            overflow-y: auto; max-height: 380px; padding-right: 4px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 5px;
+            overflow-y: auto;
+            max-height: 380px;
+            padding-right: 4px;
         }}
-        .grid::-webkit-scrollbar {{ width: 4px; }}
-        .grid::-webkit-scrollbar-thumb {{ background: #555; border-radius: 4px; }}
+        .grid::-webkit-scrollbar {{
+            width: 4px;
+        }}
+        .grid::-webkit-scrollbar-thumb {{
+            background: #555;
+            border-radius: 4px;
+        }}
         .p-btn {{
-            height: 40px; border-radius: 8px; background: #262730;
-            border: 1px solid #444; color: #999; font-size: 13px; font-weight: bold;
-            cursor: pointer; text-align: left; padding: 0 10px;
-            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+            height: 40px;
+            border-radius: 8px;
+            background: #262730;
+            border: 1px solid #444;
+            color: #999;
+            font-size: 13px;
+            font-weight: bold;
+            cursor: pointer;
+            text-align: left;
+            padding: 0 10px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            transition: transform 0.12s;
         }}
-        .p-btn:hover {{ background: #3a3a4a; border-color: #888; }}
-        .p-btn:active {{ transform: scale(0.96); }}
-        .p-btn.sel {{ background: #1a3a1a; border-color: #4CAF50; color: #fff; }}
-        .p-btn .games {{ font-size: 11px; color: #666; font-weight: normal; }}
-        .p-btn.sel .games {{ color: #8bc78b; }}
-        .add-section {{ border-top: 1px solid #333; padding-top: 8px; margin-top: 4px; }}
-        .add-title {{ font-size: 13px; color: #aaa; margin-bottom: 6px; font-weight: bold; }}
-        .add-row {{ display: flex; gap: 6px; }}
+        .p-btn:hover {{
+            background: #3a3a4a;
+            border-color: #888;
+        }}
+        .p-btn:active {{
+            transform: scale(0.96);
+        }}
+        .p-btn.sel {{
+            background: #1a3a1a;
+            border-color: #4CAF50;
+            color: #fff;
+        }}
+        .p-btn .games {{
+            font-size: 11px;
+            color: #666;
+            font-weight: normal;
+        }}
+        .p-btn.sel .games {{
+            color: #8bc78b;
+        }}
+        .add-section {{
+            border-top: 1px solid #333;
+            padding-top: 8px;
+            margin-top: 4px;
+        }}
+        .add-title {{
+            font-size: 13px;
+            color: #aaa;
+            margin-bottom: 6px;
+            font-weight: bold;
+        }}
+        .add-row {{
+            display: flex;
+            gap: 6px;
+        }}
         .add-row input {{
-            flex: 1; height: 36px; border-radius: 6px; border: 1px solid #555;
-            background: #1a1a2e; color: #fff; padding: 0 8px; font-size: 13px; outline: none;
+            flex: 1;
+            height: 36px;
+            border-radius: 6px;
+            border: 1px solid #555;
+            background: #1a1a2e;
+            color: #fff;
+            padding: 0 8px;
+            font-size: 13px;
+            outline: none;
         }}
-        .add-row input:focus {{ border-color: #4CAF50; }}
-        .add-row input::placeholder {{ color: #666; }}
+        .add-row input:focus {{
+            border-color: #4CAF50;
+        }}
+        .add-row input::placeholder {{
+            color: #666;
+        }}
         .btn-add {{
-            height: 36px; width: 42px; border-radius: 6px; background: #2d5a2d;
-            border: 1px solid #4CAF50; color: #fff; font-size: 18px; font-weight: bold; cursor: pointer;
+            height: 36px;
+            width: 42px;
+            border-radius: 6px;
+            background: #2d5a2d;
+            border: 1px solid #4CAF50;
+            color: #fff;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
         }}
-        .btn-add:hover {{ background: #3a6a3a; }}
-        .btn-add:active {{ transform: scale(0.95); }}
+        .btn-add:hover {{
+            background: #3a6a3a;
+        }}
+        .btn-add:active {{
+            transform: scale(0.95);
+        }}
     </style>
     <div class="wrap">
         <div class="header">
@@ -381,12 +493,14 @@ def screen_select_players():
             <div class="sub">{counter_sub}</div>
         </div>
         <div class="controls">
-            <button class="ctrl-btn btn-back" onclick="clickSP('sp_Назад')">⬅️</button>
-            {repeat_html}
-            <button class="ctrl-btn btn-start" onclick="{start_onclick}" {"" if can_go else "disabled"}>🚀 Старт</button>
+            <button class="ctrl-btn" style="{back_style}" onclick="clickSP('sp_Назад')">⬅️ Назад</button>
+            <button class="ctrl-btn" style="{repeat_style}" onclick="clickSP('sp_Повтор')">🔄 Повтор</button>
+            <button class="ctrl-btn" style="{start_style}" onclick="{start_onclick}" {start_disabled}>🚀 Старт</button>
         </div>
         <div class="divider"></div>
-        <div class="grid">{players_html}</div>
+        <div class="grid">
+            {players_html}
+        </div>
         <div class="add-section">
             <div class="add-title">➕ Быстрое добавление</div>
             <div class="add-row">
@@ -412,7 +526,6 @@ def screen_select_players():
         const name = document.getElementById('inp_name').value.trim();
         const nick = document.getElementById('inp_nick').value.trim();
         if (!name || !nick) return;
-        // Сохраняем в скрытые ST текстовые поля через URL hack
         const url = new URL(window.parent.location);
         url.searchParams.set('qa_add', name + '|||' + nick);
         window.parent.history.replaceState(null, '', url);
@@ -421,8 +534,7 @@ def screen_select_players():
     </script>
     """, height=720)
 
-
-    # === Скрытые ST-кнопки ПОСЛЕ iframe ===
+    # === Скрытые ST-кнопки ===
     for idx, p in enumerate(sorted_players):
         if st.button(f"sp_t_{idx}", key=f"sel_p_{idx}"):
             pid = p['id']
@@ -458,7 +570,7 @@ def screen_select_players():
                 st.query_params.clear()
                 st.rerun()
 
-    # Прячем все sp_ кнопки и скроллим вверх
+    # Прячем sp_ кнопки и скроллим вверх
     components.html("""
     <script>
     (function() {
@@ -473,7 +585,6 @@ def screen_select_players():
                     }
                 }
             });
-            // Скроллим вверх
             const main = window.parent.document.querySelector('section.main');
             if (main) main.scrollTop = 0;
             const block = window.parent.document.querySelector('[data-testid="stMainBlockContainer"]');
