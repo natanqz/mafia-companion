@@ -137,7 +137,7 @@ def screen_main_menu():
         }
     }
     </script>
-    """, height=420)
+    """, height=520)
 
 
 
