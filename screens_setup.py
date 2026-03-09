@@ -420,6 +420,8 @@ def screen_select_players():
     }}
     </script>
     """, height=720)
+
+
     # === Скрытые ST-кнопки ПОСЛЕ iframe ===
     for idx, p in enumerate(sorted_players):
         if st.button(f"sp_t_{idx}", key=f"sel_p_{idx}"):
@@ -485,7 +487,6 @@ def screen_select_players():
     })();
     </script>
     """, height=0)
-
 
 
 def _finalize_players(db):
