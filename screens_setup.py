@@ -68,7 +68,7 @@ def screen_select_players():
         st.session_state.selected_pids = []
     if db.get('last_composition'):
         if st.button("🔄 Повторить прошлый состав", use_container_width=True):
-            st.session_state.selected_pids = db['last_composition'][:];
+            st.session_state.selected_pids = db['last_composition'][:]
             st.rerun()
     st.markdown("---")
     count = len(st.session_state.selected_pids)
@@ -82,7 +82,7 @@ def screen_select_players():
     )
     if can_go:
         if st.button(f"✅ Далее ({count})", use_container_width=True, key="players_next"):
-            _finalize_players(db);
+            _finalize_players(db)
             st.rerun()
     else:
         st.button("Минимум 7", use_container_width=True, disabled=True, key="players_next_d")
@@ -90,9 +90,6 @@ def screen_select_players():
     st.markdown("---")
 
     sorted_players = sorted(db['players'], key=lambda p: get_play_count(db, p['id']), reverse=True)
-
-    # Маркер начала сетки игроков
-    st.markdown('<div id="player-grid-start"></div>', unsafe_allow_html=True)
 
     for idx, p in enumerate(sorted_players):
         is_sel = p['id'] in st.session_state.selected_pids
@@ -104,59 +101,6 @@ def screen_select_players():
                 st.session_state.selected_pids.append(p['id'])
             st.rerun()
 
-    # Маркер конца сетки
-    st.markdown('<div id="player-grid-end"></div>', unsafe_allow_html=True)
-
-    # JS: превращаем кнопки между маркерами в 2-колоночную сетку
-    components.html("""
-    <script>
-    function makeGrid() {
-        const doc = window.parent.document;
-        const start = doc.getElementById('player-grid-start');
-        const end = doc.getElementById('player-grid-end');
-        if (!start || !end) return;
-
-        // Найти все элементы между маркерами
-        let el = start.closest('[data-testid="stVerticalBlock"]') || start.parentElement;
-        if (!el) return;
-
-        // Находим кнопки между start и end
-        const allButtons = [];
-        let collecting = false;
-        const children = el.parentElement ? el.parentElement.children : [];
-
-        for (let i = 0; i < children.length; i++) {
-            const child = children[i];
-            if (child.querySelector('#player-grid-start')) { collecting = true; continue; }
-            if (child.querySelector('#player-grid-end')) { collecting = false; break; }
-            if (collecting && child.querySelector('button')) {
-                allButtons.push(child);
-            }
-        }
-
-        if (allButtons.length < 2) return;
-
-        // Оборачиваем в grid-контейнер
-        const wrapper = doc.createElement('div');
-        wrapper.style.display = 'grid';
-        wrapper.style.gridTemplateColumns = '1fr 1fr';
-        wrapper.style.gap = '4px';
-        wrapper.id = 'player-grid-wrapper';
-
-        if (doc.getElementById('player-grid-wrapper')) return; // уже сделано
-
-        allButtons[0].parentElement.insertBefore(wrapper, allButtons[0]);
-        allButtons.forEach(btn => wrapper.appendChild(btn));
-    }
-
-    setTimeout(makeGrid, 500);
-    setTimeout(makeGrid, 1500);
-    setTimeout(makeGrid, 3000);
-    new MutationObserver(() => setTimeout(makeGrid, 300))
-        .observe(window.parent.document.body, {childList: true, subtree: true});
-    </script>
-    """, height=0)
-
     st.markdown("---")
     with st.expander("➕ Добавить нового игрока"):
         c1, c2 = st.columns(2)
@@ -166,13 +110,14 @@ def screen_select_players():
             if rn and nn:
                 pid = str(uuid.uuid4())
                 db['players'].append({"id": pid, "real_name": rn.strip(), "nickname": nn.strip(), "history": []})
-                save_db(db);
-                st.success(f"✅ {rn} ({nn})");
+                save_db(db)
+                st.success(f"✅ {rn} ({nn})")
                 st.rerun()
     st.markdown("---")
     if st.button("⬅️ Назад", use_container_width=True, key="players_back"):
-        go("select_mode");
+        go("select_mode")
         st.rerun()
+
 
 
 def _finalize_players(db):
