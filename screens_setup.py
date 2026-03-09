@@ -930,82 +930,327 @@ def _render_manual_roles_by_role(players, roles, n):
 
 
 def screen_night_zero():
+    import streamlit.components.v1 as components
+    sync_music()
     game = st.session_state.game
 
-    if "n0_timer_start" not in st.session_state: st.session_state.n0_timer_start = None
-    if "n0_timer_duration" not in st.session_state: st.session_state.n0_timer_duration = 60
-    if "n0_timer_paused" not in st.session_state: st.session_state.n0_timer_paused = False
-    if "n0_timer_paused_remaining" not in st.session_state: st.session_state.n0_timer_paused_remaining = 60
+    if "n0_phase" not in st.session_state:
+        st.session_state.n0_phase = "idle"
+    if "n0_timer_start" not in st.session_state:
+        st.session_state.n0_timer_start = None
+    if "n0_seconds" not in st.session_state:
+        st.session_state.n0_seconds = 60
 
-    st.markdown(
-        '<div style="text-align:center;padding:20px 0 5px;">'
-        '<p style="font-size:80px;margin:0;">🌙</p>'
-        '<p style="font-size:22px;font-weight:bold;color:#fff;">Ночь 0 — Знакомство</p></div>',
-        unsafe_allow_html=True
-    )
-    st.markdown("---")
+    phase = st.session_state.n0_phase
+    notes = st.session_state.get('mafia_notes', '')
 
-    remaining = _get_n0_remaining()
-    progress = min(100, int(((60 - remaining) / 60) * 100))
-    is_running = st.session_state.n0_timer_start is not None
-    is_paused = st.session_state.n0_timer_paused
-    is_idle = not is_running and not is_paused
+    # Определяем состояние для HTML
+    if phase == "idle":
+        sec_display = 60
+        progress_pct = 0
+        show_start = "true"
+        show_restart = "false"
+        timer_color = "#4CAF50"
+    elif phase == "running":
+        if st.session_state.n0_timer_start:
+            elapsed = time.time() - st.session_state.n0_timer_start
+            sec_display = max(0, st.session_state.n0_seconds - int(elapsed))
+        else:
+            sec_display = st.session_state.n0_seconds
+        progress_pct = min(100, int(((60 - sec_display) / 60) * 100))
+        show_start = "false"
+        show_restart = "true"
+        if sec_display > 10:
+            timer_color = "#4CAF50"
+        elif sec_display > 5:
+            timer_color = "#ff8c00"
+        else:
+            timer_color = "#ff2222"
+    else:  # done
+        sec_display = 0
+        progress_pct = 100
+        show_start = "false"
+        show_restart = "true"
+        timer_color = "#ff2222"
 
-    col_reset, col_timer, col_pause = st.columns([1, 3, 1])
-    with col_reset:
-        if not is_idle:
-            if st.button("🔄", key="n0_reset", use_container_width=True):
-                st.session_state.n0_timer_start = time.time()
-                st.session_state.n0_timer_duration = 60
-                st.session_state.n0_timer_paused = False; st.rerun()
-    with col_pause:
-        if is_running:
-            if st.button("⏸️", key="n0_pause", use_container_width=True):
-                st.session_state.n0_timer_paused = True
-                st.session_state.n0_timer_paused_remaining = remaining
-                st.session_state.n0_timer_start = None; st.rerun()
-        elif is_paused:
-            if st.button("▶️", key="n0_unpause", use_container_width=True):
-                st.session_state.n0_timer_paused = False
-                st.session_state.n0_timer_start = time.time()
-                st.session_state.n0_timer_duration = st.session_state.n0_timer_paused_remaining; st.rerun()
-    with col_timer:
-        timer_ph = st.empty()
+    # Кнопка утро: показываем когда idle или done
+    show_morning = "true" if phase != "running" else "false"
 
-    color = "white" if remaining > 10 else "red"
-    timer_ph.markdown(f'''
-    <div style="text-align:center;">
-        <p style="font-size:72px;font-weight:bold;margin:0;color:{color};line-height:1;">{remaining}</p>
-        <div style="background:#333;border-radius:6px;height:8px;margin:4px 20px;">
-            <div style="background:#4CAF50;width:{progress}%;height:100%;border-radius:6px;"></div>
+    components.html(f"""
+    <style>
+        * {{ margin: 0; padding: 0; box-sizing: border-box; }}
+        body {{ background: transparent; font-family: -apple-system, sans-serif; }}
+        .wrap {{
+            display: flex; flex-direction: column; align-items: center;
+            padding: 16px 12px; gap: 12px;
+        }}
+        .header-icon {{ font-size: 64px; }}
+        .header-title {{
+            font-size: 22px; font-weight: bold; color: #fff;
+            margin: 4px 0;
+        }}
+        .header-sub {{
+            font-size: 14px; color: #888;
+        }}
+
+        /* Круговой таймер */
+        .timer-wrap {{
+            position: relative;
+            width: 220px; height: 220px;
+            margin: 8px 0;
+        }}
+        .timer-svg {{
+            transform: rotate(-90deg);
+            width: 220px; height: 220px;
+        }}
+        .timer-bg {{
+            fill: none;
+            stroke: #333;
+            stroke-width: 6;
+        }}
+        .timer-progress {{
+            fill: none;
+            stroke: {timer_color};
+            stroke-width: 6;
+            stroke-linecap: round;
+            transition: stroke-dashoffset 0.9s linear, stroke 0.3s;
+        }}
+        .timer-text {{
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 72px;
+            font-weight: bold;
+            color: {timer_color};
+            line-height: 1;
+        }}
+
+        /* Кнопки */
+        .btn-row {{
+            display: flex; gap: 8px; width: 100%;
+        }}
+        .btn {{
+            flex: 1; height: 52px; border-radius: 12px;
+            font-size: 16px; font-weight: bold; cursor: pointer;
+            border: none; transition: transform 0.12s;
+        }}
+        .btn:active {{ transform: scale(0.95); }}
+        .btn:hover {{ filter: brightness(1.15); }}
+        .btn-start {{
+            background: linear-gradient(135deg, #27ae60, #219a52);
+            color: #fff;
+        }}
+        .btn-restart {{
+            background: #262730; color: #ccc; border: 1px solid #555;
+        }}
+        .btn-morning {{
+            width: 100%; height: 56px; border-radius: 14px;
+            background: linear-gradient(135deg, #e67e22, #d35400);
+            color: #fff; font-size: 18px; font-weight: bold;
+            border: none; cursor: pointer; transition: transform 0.12s;
+        }}
+        .btn-morning:active {{ transform: scale(0.95); }}
+        .btn-morning:hover {{ filter: brightness(1.15); }}
+
+        /* Заметка */
+        .notes-wrap {{
+            width: 100%;
+            background: #1a1a2e;
+            border-radius: 10px;
+            padding: 10px 14px;
+        }}
+        .notes-label {{
+            font-size: 13px; color: #888; margin-bottom: 4px; font-weight: bold;
+        }}
+        .notes-area {{
+            width: 100%; min-height: 70px;
+            background: #262730; border: 1px solid #444;
+            border-radius: 6px; color: #fff; font-size: 14px;
+            padding: 8px; resize: vertical; outline: none;
+            font-family: -apple-system, sans-serif;
+        }}
+        .notes-area:focus {{ border-color: #4CAF50; }}
+
+        .divider {{ border-top: 1px solid #333; width: 100%; margin: 4px 0; }}
+    </style>
+    <div class="wrap">
+        <div class="header-icon">🌙</div>
+        <div class="header-title">Ночь 0 — Знакомство</div>
+        <div class="header-sub">Мафия знакомится друг с другом</div>
+
+        <div class="timer-wrap">
+            <svg class="timer-svg" viewBox="0 0 220 220">
+                <circle class="timer-bg" cx="110" cy="110" r="100"/>
+                <circle class="timer-progress" id="progressCircle"
+                    cx="110" cy="110" r="100"
+                    stroke-dasharray="628.32"
+                    stroke-dashoffset="{628.32 * (1 - progress_pct / 100)}"
+                />
+            </svg>
+            <div class="timer-text" id="timerText">{sec_display}</div>
         </div>
-    </div>''', unsafe_allow_html=True)
 
-    if is_idle:
-        if st.button("▶️ Старт таймера", use_container_width=True, key="n0_start"):
-            st.session_state.n0_timer_start = time.time()
-            st.session_state.n0_timer_duration = 60; st.rerun()
+        <div class="btn-row">
+            <button class="btn btn-start" id="btnStart"
+                style="display:{('flex' if phase == 'idle' else 'none')}"
+                onclick="clickN0('n0_Старт')">▶️ Старт</button>
+            <button class="btn btn-restart" id="btnRestart"
+                style="display:{('flex' if phase != 'idle' else 'none')}"
+                onclick="clickN0('n0_Рестарт')">🔄 Рестарт</button>
+        </div>
 
-    st.markdown("---")
-    st.markdown("### 📝 Заметки ведущего")
-    notes = st.text_area("Очерёдность стрельбы:", value=st.session_state.get('mafia_notes', ''), key="mn_input", height=100)
-    st.session_state.mafia_notes = notes
-    st.markdown("---")
+        <div class="divider"></div>
 
-    # Кнопка ТОЛЬКО когда таймер не крутится
-    if not is_running:
-        if st.button("☀️ Наступает Утро 1", use_container_width=True, key="to_day1"):
-            st.session_state.day_number = 1
-            st.session_state.current_speaker = 0
-            st.session_state.nominees = {}
-            st.session_state.game_log.append("Ночь 0: Знакомство")
+        <div class="notes-wrap">
+            <div class="notes-label">📝 Заметки ведущего</div>
+            <textarea class="notes-area" id="notesArea"
+                placeholder="Очерёдность стрельбы..."
+                oninput="saveNotes()">{notes}</textarea>
+        </div>
+
+        <div class="divider"></div>
+
+        <button class="btn-morning" id="btnMorning"
+            style="display:{('block' if phase != 'running' else 'none')}"
+            onclick="doMorning()">☀️ Наступает Утро 1</button>
+    </div>
+    <script>
+    function clickN0(text) {{
+        const buttons = window.parent.document.querySelectorAll('button');
+        for (let b of buttons) {{
+            if (b.textContent.includes(text)) {{
+                b.style.opacity = '1';
+                b.style.pointerEvents = 'auto';
+                b.click();
+                return;
+            }}
+        }}
+    }}
+
+    function saveNotes() {{
+        const val = document.getElementById('notesArea').value;
+        const url = new URL(window.parent.location);
+        url.searchParams.set('n0_notes', val);
+        window.parent.history.replaceState(null, '', url);
+    }}
+
+    function doMorning() {{
+        saveNotes();
+        clickN0('n0_Утро');
+    }}
+    </script>
+    """, height=680)
+
+    # === Скрытые ST-кнопки ===
+    if st.button("n0_Старт", key="n0_start_btn"):
+        st.session_state.n0_phase = "running"
+        st.session_state.n0_timer_start = time.time()
+        st.session_state.n0_seconds = 60
+        st.rerun()
+
+    if st.button("n0_Рестарт", key="n0_restart_btn"):
+        st.session_state.n0_phase = "running"
+        st.session_state.n0_timer_start = time.time()
+        st.session_state.n0_seconds = 60
+        st.rerun()
+
+    if st.button("n0_Утро", key="n0_morning_btn"):
+        # Сохраняем заметки
+        params = st.query_params
+        notes_val = params.get("n0_notes", st.session_state.get('mafia_notes', ''))
+        st.session_state.mafia_notes = notes_val
+        # Переход
+        st.session_state.day_number = 1
+        st.session_state.current_speaker = 0
+        st.session_state.nominees = {}
+        st.session_state.game_log.append("Ночь 0: Знакомство")
+        st.session_state.n0_phase = "idle"
+        st.session_state.n0_timer_start = None
+        go("game_day")
+        st.rerun()
+
+    # === Живой таймер ===
+    if phase == "running" and st.session_state.n0_timer_start:
+        _run_n0_live()
+
+    # Прячем n0_ кнопки
+    components.html("""
+    <script>
+    (function() {
+        function hide() {
+            const buttons = window.parent.document.querySelectorAll('button');
+            buttons.forEach(b => {
+                if ((b.textContent || '').startsWith('n0_')) {
+                    const w = b.closest('div[data-testid="stButton"]');
+                    if (w) w.style.cssText = 'height:0!important;min-height:0!important;overflow:hidden!important;margin:0!important;padding:0!important;opacity:0!important;position:absolute!important;pointer-events:none!important;';
+                }
+            });
+        }
+        setTimeout(hide, 50);
+        setTimeout(hide, 200);
+        setTimeout(hide, 500);
+    })();
+    </script>
+    """, height=0)
+
+
+def _run_n0_live():
+    """Живое обновление кругового таймера + звуки"""
+    start = st.session_state.n0_timer_start
+    total = st.session_state.n0_seconds
+    if not start:
+        return
+
+    # Создаём placeholder для обновления таймера через JS
+    timer_ph = st.empty()
+
+    while True:
+        elapsed = time.time() - start
+        sec = max(0, total - int(elapsed))
+        progress_pct = min(100, int(((total - sec) / max(total, 1)) * 100))
+        dash_offset = 628.32 * (1 - progress_pct / 100)
+
+        if sec > 10:
+            color = "#4CAF50"
+        elif sec > 5:
+            color = "#ff8c00"
+        else:
+            color = "#ff2222"
+
+        # Обновляем через JS (не пересоздаём HTML)
+        components.html(f"""
+        <script>
+        (function() {{
+            var pd = window.parent.document;
+            var frames = pd.querySelectorAll('iframe');
+            for (var f of frames) {{
+                try {{
+                    var doc = f.contentDocument || f.contentWindow.document;
+                    var circle = doc.getElementById('progressCircle');
+                    var text = doc.getElementById('timerText');
+                    if (circle && text) {{
+                        circle.style.strokeDashoffset = '{dash_offset}';
+                        circle.style.stroke = '{color}';
+                        text.style.color = '{color}';
+                        text.textContent = '{sec}';
+                        break;
+                    }}
+                }} catch(e) {{}}
+            }}
+        }})();
+        </script>
+        """, height=0)
+
+        if sec <= 10 and sec > 0:
+            play_sound_html(METRONOME_SOUND)
+        if sec == 0:
+            play_sound_html(WHISTLE_SOUND)
+            st.session_state.n0_phase = "done"
             st.session_state.n0_timer_start = None
-            st.session_state.n0_timer_paused = False
-            go("game_day"); st.rerun()
+            st.rerun()
+            break
 
-
-    if is_running:
-        _run_n0_timer(timer_ph)
+        time.sleep(1)
 
 
 def _get_n0_remaining():
