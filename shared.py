@@ -98,7 +98,6 @@ def inject_styles():
     </style>
     """, unsafe_allow_html=True)
 
-
 def inject_gold_buttons(texts=None):
     if texts is None:
         texts = [
@@ -115,21 +114,22 @@ def inject_gold_buttons(texts=None):
         const keywords = {keywords_js};
         const buttons = window.parent.document.querySelectorAll('button');
         buttons.forEach(btn => {{
+            if (btn.dataset.goldApplied) return;
             const text = btn.textContent || '';
             const isGold = keywords.some(kw => text.includes(kw));
             if (isGold) {{
                 btn.style.border = '3px solid #DAA520';
                 btn.style.boxShadow = '0 0 15px rgba(218, 165, 32, 0.6)';
+                btn.dataset.goldApplied = '1';
             }}
         }});
     }}
     setTimeout(applyGold, 300);
     setTimeout(applyGold, 800);
     setTimeout(applyGold, 2000);
-    new MutationObserver(() => setTimeout(applyGold, 200))
-        .observe(window.parent.document.body, {{childList: true, subtree: true}});
     </script>
     """, height=0)
+
 
 
 def background_music(filename, loop=True):
