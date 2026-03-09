@@ -95,17 +95,10 @@ def inject_styles():
     .fs-civil {{ background: #cc0000; color: #fff; }}
     .fs-sheriff-found {{ background: #00aa00; color: #fff; }}
     .fs-civil-for-don {{ background: #cc0000; color: #fff; }}
-
-    /* Принудительно горизонтальные колонки */
-    [data-testid="stHorizontalBlock"] {{
-        flex-wrap: nowrap !important;
-    }}
-    [data-testid="column"] {{
-        min-width: 0 !important;
-    }}
     </style>
 
     <script>
+    // Золотые кнопки
     const goldKeywords = {json.dumps(gold_texts)};
 
     function applyGoldButtons() {{
@@ -119,11 +112,32 @@ def inject_styles():
         }});
     }}
 
-    setTimeout(applyGoldButtons, 500);
-    setTimeout(applyGoldButtons, 1500);
+    // Принудительно горизонтальные колонки
+    function forceColumns() {{
+        document.querySelectorAll('[data-testid="stHorizontalBlock"]').forEach(block => {{
+            block.style.setProperty('flex-wrap', 'nowrap', 'important');
+            block.style.setProperty('flex-direction', 'row', 'important');
+            block.style.setProperty('gap', '4px', 'important');
+        }});
+        document.querySelectorAll('[data-testid="column"]').forEach(col => {{
+            col.style.setProperty('min-width', '0', 'important');
+            col.style.setProperty('flex', '1 1 0%', 'important');
+            col.style.setProperty('width', 'auto', 'important');
+        }});
+    }}
+
+    function applyAll() {{
+        applyGoldButtons();
+        forceColumns();
+    }}
+
+    setTimeout(applyAll, 300);
+    setTimeout(applyAll, 800);
+    setTimeout(applyAll, 1500);
+    setTimeout(applyAll, 3000);
 
     const observer = new MutationObserver(() => {{
-        setTimeout(applyGoldButtons, 200);
+        setTimeout(applyAll, 100);
     }});
     observer.observe(document.body, {{ childList: true, subtree: true }});
     </script>
