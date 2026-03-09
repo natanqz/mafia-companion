@@ -34,13 +34,13 @@ def screen_main_menu():
         go("select_mode")
         st.rerun()
     if st.button("👥 Игроки", key="main_players"):
-        go("manage_players")
+        go("players_list")
         st.rerun()
     if st.button("📦 Архив", key="main_archive"):
         go("archive")
         st.rerun()
     if st.button("📤 Экспорт", key="main_export"):
-        go("export")
+        go("export_import")
         st.rerun()
 
     # HTML главный экран
@@ -138,6 +138,7 @@ def screen_main_menu():
     }
     </script>
     """, height=420)
+
 
 
 def screen_select_mode():
