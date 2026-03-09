@@ -332,46 +332,59 @@ def screen_select_players():
         counter_text = f"{count} игроков"
         counter_sub = "можно начать"
 
-    # Прячем только кнопки (не инпуты!)
+    sorted_players = sorted(db['players'], key=lambda p: get_play_count(db, p['id']), reverse=True)
+
+    # === Скрытые кнопки в контейнере ===
+    hidden = st.container()
+    with hidden:
+        st.markdown("""
+        <style>
+        div[data-testid="stVerticalBlock"]:first-child div[data-testid="stButton"]:has(button[key^="sel_p_"]),
+        div[data-testid="stButton"]:has(button[key^="sel_p_"]) {
+            height: 0px !important; min-height: 0px !important;
+            overflow: hidden !important; margin: 0 !important;
+            padding: 0 !important; opacity: 0 !important;
+        }
+        </style>
+        """, unsafe_allow_html=True)
+
+        for idx, p in enumerate(sorted_players):
+            if st.button(f"sp_t_{idx}", key=f"sel_p_{idx}"):
+                pid = p['id']
+                if pid in st.session_state.selected_pids:
+                    st.session_state.selected_pids.remove(pid)
+                else:
+                    st.session_state.selected_pids.append(pid)
+                st.rerun()
+
+        if st.button("sp_Старт", key="sp_start"):
+            if can_go:
+                _finalize_players(db)
+                st.rerun()
+
+        if st.button("sp_Повтор", key="sp_repeat"):
+            st.session_state.selected_pids = db.get('last_composition', [])[:]
+            st.rerun()
+
+        if st.button("sp_Назад", key="sp_back"):
+            go("select_mode")
+            st.rerun()
+
+    # Прячем весь контейнер скрытых кнопок
     st.markdown("""
     <style>
-    div[data-testid="stMainBlockContainer"] div[data-testid="stButton"] {
+    div[data-testid="stMainBlockContainer"] > div > div > div:first-child {
         height: 0px !important;
         min-height: 0px !important;
         overflow: hidden !important;
+        opacity: 0 !important;
         margin: 0 !important;
         padding: 0 !important;
-        opacity: 0 !important;
     }
     </style>
     """, unsafe_allow_html=True)
 
-    # === Скрытые Streamlit-кнопки ===
-    sorted_players = sorted(db['players'], key=lambda p: get_play_count(db, p['id']), reverse=True)
-
-    for idx, p in enumerate(sorted_players):
-        if st.button(f"sp_t_{idx}", key=f"sel_p_{idx}"):
-            pid = p['id']
-            if pid in st.session_state.selected_pids:
-                st.session_state.selected_pids.remove(pid)
-            else:
-                st.session_state.selected_pids.append(pid)
-            st.rerun()
-
-    if st.button("sp_Старт", key="players_next"):
-        if can_go:
-            _finalize_players(db)
-            st.rerun()
-
-    if st.button("sp_Повтор", key="repeat_comp"):
-        st.session_state.selected_pids = db.get('last_composition', [])[:]
-        st.rerun()
-
-    if st.button("sp_Назад", key="players_back"):
-        go("select_mode")
-        st.rerun()
-
-    # === Генерируем HTML ===
+    # === HTML меню ===
     players_html = ""
     for idx, p in enumerate(sorted_players):
         is_sel = p['id'] in st.session_state.selected_pids
@@ -396,33 +409,18 @@ def screen_select_players():
     <style>
         * {{ margin: 0; padding: 0; box-sizing: border-box; }}
         body {{ background: transparent; font-family: -apple-system, sans-serif; }}
-        .wrap {{
-            display: flex;
-            flex-direction: column;
-            padding: 10px 8px;
-            gap: 8px;
-        }}
+        .wrap {{ display: flex; flex-direction: column; padding: 10px 8px; gap: 8px; }}
         .header {{ text-align: center; padding: 4px 0; }}
         .header .icon {{ font-size: 56px; }}
         .header .title {{ font-size: 20px; font-weight: bold; color: #fff; margin: 2px 0; }}
-        .counter {{
-            text-align: center;
-            padding: 10px 16px;
-            border-radius: 12px;
-            background: {counter_bg};
-        }}
+        .counter {{ text-align: center; padding: 10px 16px; border-radius: 12px; background: {counter_bg}; }}
         .counter .num {{ font-size: 32px; font-weight: bold; color: #fff; }}
         .counter .sub {{ font-size: 13px; color: rgba(255,255,255,0.7); margin-top: 2px; }}
         .controls {{ display: flex; gap: 6px; }}
         .ctrl-btn {{
-            height: 44px;
-            border-radius: 10px;
-            border: 1px solid #555;
-            font-size: 14px;
-            font-weight: bold;
-            cursor: pointer;
-            transition: transform 0.12s;
-            padding: 0 14px;
+            height: 44px; border-radius: 10px; border: 1px solid #555;
+            font-size: 14px; font-weight: bold; cursor: pointer;
+            transition: transform 0.12s; padding: 0 14px;
         }}
         .ctrl-btn:active {{ transform: scale(0.95); }}
         .btn-back {{ background: #262730; color: #ccc; flex: 0 0 auto; }}
@@ -436,12 +434,8 @@ def screen_select_players():
         }}
         .divider {{ border-top: 1px solid #333; margin: 2px 0; }}
         .grid {{
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 5px;
-            overflow-y: auto;
-            max-height: 380px;
-            padding-right: 4px;
+            display: grid; grid-template-columns: 1fr 1fr; gap: 5px;
+            overflow-y: auto; max-height: 380px; padding-right: 4px;
         }}
         .grid::-webkit-scrollbar {{ width: 4px; }}
         .grid::-webkit-scrollbar-thumb {{ background: #555; border-radius: 4px; }}
@@ -494,7 +488,7 @@ def screen_select_players():
     </script>
     """, height=680)
 
-    # === Добавление игрока — через Streamlit (не прячем) ===
+    # === Форма добавления — нативный Streamlit (видимый) ===
     st.markdown("---")
     st.markdown("**➕ Быстрое добавление**")
     c1, c2, c3 = st.columns([2, 2, 1])
@@ -503,8 +497,8 @@ def screen_select_players():
     with c2:
         nn = st.text_input("Ник", key="qa_nick", label_visibility="collapsed", placeholder="Псевдоним")
     with c3:
-        if st.button("➕", key="qa_add", use_container_width=True):
-            if rn and nn:
+        if st.button("➕", key="qa_add_btn", use_container_width=True):
+            if rn.strip() and nn.strip():
                 pid = str(uuid.uuid4())
                 db['players'].append({"id": pid, "real_name": rn.strip(), "nickname": nn.strip(), "history": []})
                 save_db(db)
