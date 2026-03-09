@@ -9,7 +9,7 @@ from shared import *
 from collections import Counter
 from shared import (
     load_db, save_db, get_player, get_play_count, go,
-    music_player, calculate_roles, role_emoji,
+    sync_music, calculate_roles, role_emoji,
     play_sound_html, METRONOME_SOUND, WHISTLE_SOUND
 )
 import streamlit.components.v1 as components
@@ -17,84 +17,57 @@ import streamlit.components.v1 as components
 
 def screen_main_menu():
     import streamlit.components.v1 as components
+    sync_music()
 
-    # Получаем список треков
-    music_files = []
-    if os.path.exists(MUSIC_FOLDER):
-        music_files = sorted([f for f in os.listdir(MUSIC_FOLDER) if f.endswith(".mp3")])
-
-    # Текущий трек
-    if "music_track" not in st.session_state and music_files:
-        st.session_state.music_track = music_files[0]
-    if "music_position" not in st.session_state:
-        st.session_state.music_position = 0.0
-    if "music_playing" not in st.session_state:
-        st.session_state.music_playing = True
-
-    # Подготавливаем аудио base64
-    track_b64 = ""
-    track_name = st.session_state.get("music_track", "")
-    if track_name:
-        track_path = os.path.join(MUSIC_FOLDER, track_name)
-        if os.path.exists(track_path):
-            with open(track_path, 'rb') as f:
-                track_b64 = base64.b64encode(f.read()).decode()
-
-    saved_pos = st.session_state.get("music_position", 0.0)
-    auto_play = "true" if st.session_state.get("music_playing", True) else "false"
-
-    components.html(f"""
+    components.html("""
     <style>
-        * {{ margin: 0; padding: 0; box-sizing: border-box; }}
-        body {{ background: transparent; font-family: -apple-system, sans-serif; }}
-        .wrap {{
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { background: transparent; font-family: -apple-system, sans-serif; }
+        .wrap {
             display: flex; flex-direction: column; align-items: center;
             padding: 20px 16px 10px; gap: 12px;
-        }}
-        .logo {{ font-size: 72px; }}
-        .title {{ font-size: 28px; font-weight: bold; color: #fff; }}
-        .main-btn {{
+        }
+        .logo { font-size: 72px; }
+        .title { font-size: 28px; font-weight: bold; color: #fff; }
+        .main-btn {
             width: 180px; height: 180px; border-radius: 24px;
             background: linear-gradient(135deg, #e74c3c, #c0392b);
             border: none; cursor: pointer; display: flex;
             flex-direction: column; align-items: center; justify-content: center;
             gap: 8px; transition: transform 0.15s;
-        }}
-        .main-btn:hover {{ transform: scale(1.05); }}
-        .main-btn:active {{ transform: scale(0.95); }}
-        .main-btn .icon {{ font-size: 48px; }}
-        .main-btn .text {{ font-size: 20px; font-weight: bold; color: #fff; }}
-        .bottom-row {{ display: flex; gap: 10px; margin-top: 8px; }}
-        .small-btn {{
+        }
+        .main-btn:hover { transform: scale(1.05); }
+        .main-btn:active { transform: scale(0.95); }
+        .main-btn .icon { font-size: 48px; }
+        .main-btn .text { font-size: 20px; font-weight: bold; color: #fff; }
+        .bottom-row { display: flex; gap: 10px; margin-top: 8px; }
+        .small-btn {
             width: 110px; height: 80px; border-radius: 14px;
             background: #1e1e2e; border: 1px solid #444;
             cursor: pointer; display: flex; flex-direction: column;
             align-items: center; justify-content: center; gap: 4px;
             transition: transform 0.15s;
-        }}
-        .small-btn:hover {{ background: #2a2a3e; border-color: #888; }}
-        .small-btn:active {{ transform: scale(0.95); }}
-        .small-btn .icon {{ font-size: 28px; }}
-        .small-btn .text {{ font-size: 12px; color: #ccc; font-weight: bold; }}
-        .divider {{ border-top: 1px solid #333; width: 100%; margin: 6px 0; }}
-        .player-row {{
+        }
+        .small-btn:hover { background: #2a2a3e; border-color: #888; }
+        .small-btn:active { transform: scale(0.95); }
+        .small-btn .icon { font-size: 28px; }
+        .small-btn .text { font-size: 12px; color: #ccc; font-weight: bold; }
+        .divider { border-top: 1px solid #333; width: 100%; margin: 6px 0; }
+        .player-row {
             display: flex; align-items: center; gap: 10px;
             background: #1a1a2e; border-radius: 10px;
             padding: 8px 14px; width: 100%;
-        }}
-        .player-row .p-btn {{
+        }
+        .player-row .p-btn {
             width: 40px; height: 40px; border-radius: 50%;
             border: none; font-size: 20px; cursor: pointer;
             background: #262730; color: #fff; transition: transform 0.12s;
-        }}
-        .player-row .p-btn:active {{ transform: scale(0.9); }}
-        .player-row .track-name {{
+        }
+        .player-row .p-btn:active { transform: scale(0.9); }
+        .player-row .track-name {
             flex: 1; color: #aaa; font-size: 13px;
             white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-        }}
-        .player-row .time {{
-            color: #666; font-size: 12px; min-width: 40px; text-align: right;
-        }}
+        }
     </style>
     <div class="wrap">
         <div class="logo">🎭</div>
@@ -119,115 +92,51 @@ def screen_main_menu():
         </div>
         <div class="divider"></div>
         <div class="player-row">
-            <button class="p-btn" id="playBtn" onclick="togglePlay()">▶️</button>
-            <div class="track-name" id="trackLabel">{track_name or 'Нет музыки'}</div>
-            <div class="time" id="timeLabel">0:00</div>
+            <button class="p-btn" id="playBtn" onclick="toggleBgMusic()">⏸️</button>
+            <div class="track-name">🎵 Фоновая музыка</div>
         </div>
     </div>
     <script>
-    (function() {{
-        const AUDIO_ID = 'mm_bg_music';
-        const parentDoc = window.parent.document;
-        let audio = parentDoc.getElementById(AUDIO_ID);
-        const savedPos = {saved_pos};
-        const autoPlay = {auto_play};
-        const b64 = "{track_b64}";
+    window.toggleBgMusic = function() {
+        var a = window.parent.document.getElementById('bg_music');
+        if (!a) return;
+        if (a.paused) {
+            a.play().catch(function(){});
+            document.getElementById('playBtn').textContent = '⏸️';
+        } else {
+            a.pause();
+            document.getElementById('playBtn').textContent = '▶️';
+        }
+    };
+    setInterval(function() {
+        var a = window.parent.document.getElementById('bg_music');
+        var btn = document.getElementById('playBtn');
+        if (a && btn) btn.textContent = a.paused ? '▶️' : '⏸️';
+    }, 500);
 
-        if (!b64) return;
-
-        // Создаём аудио если нет
-        if (!audio) {{
-            audio = parentDoc.createElement('audio');
-            audio.id = AUDIO_ID;
-            audio.src = 'data:audio/mp3;base64,' + b64;
-            audio.loop = true;
-            audio.volume = 0.3;
-            parentDoc.body.appendChild(audio);
-            if (savedPos > 0) audio.currentTime = savedPos;
-        }}
-
-        const playBtn = document.getElementById('playBtn');
-        const timeLabel = document.getElementById('timeLabel');
-
-        function formatTime(s) {{
-            const m = Math.floor(s / 60);
-            const sec = Math.floor(s % 60);
-            return m + ':' + (sec < 10 ? '0' : '') + sec;
-        }}
-
-        // Обновляем время
-        setInterval(function() {{
-            if (audio) {{
-                timeLabel.textContent = formatTime(audio.currentTime);
-                playBtn.textContent = audio.paused ? '▶️' : '⏸️';
-            }}
-        }}, 500);
-
-        window.togglePlay = function() {{
-            if (!audio) return;
-            if (audio.paused) {{
-                audio.play().catch(function() {{}});
-            }} else {{
-                audio.pause();
-            }}
-        }};
-
-        // Автоплей при первом клике
-        if (autoPlay && audio.paused) {{
-            audio.play().catch(function() {{
-                // Браузер заблокировал — ждём клик
-                parentDoc.addEventListener('click', function tryPlay() {{
-                    audio.play().catch(function() {{}});
-                    parentDoc.removeEventListener('click', tryPlay);
-                }}, {{ once: true }});
-            }});
-        }}
-
-        // Сохраняем позицию перед уходом
-        window.savePosition = function() {{
-            if (audio) {{
-                const url = new URL(window.parent.location);
-                url.searchParams.set('music_pos', audio.currentTime.toFixed(1));
-                window.parent.history.replaceState(null, '', url);
-            }}
-        }};
-    }})();
-
-    function clickMM(text) {{
-        // Сохраняем позицию перед переходом
-        if (window.savePosition) window.savePosition();
+    function clickMM(text) {
         const buttons = window.parent.document.querySelectorAll('button');
-        for (let b of buttons) {{
-            if (b.textContent.includes(text)) {{
+        for (let b of buttons) {
+            if (b.textContent.includes(text)) {
                 b.style.opacity = '1';
                 b.style.pointerEvents = 'auto';
                 b.click();
                 return;
-            }}
-        }}
-    }}
+            }
+        }
+    }
     </script>
     """, height=540)
 
-    # === Скрытые кнопки ===
     if st.button("mm_Новая", key="mm_new"):
-        _save_music_pos()
-        go("select_mode")
-        st.rerun()
+        go("select_mode"); st.rerun()
     if st.button("mm_Игроки", key="mm_players"):
-        _save_music_pos()
-        go("manage_players")
-        st.rerun()
+        go("manage_players"); st.rerun()
     if st.button("mm_Архив", key="mm_archive"):
-        _save_music_pos()
-        go("archive")
-        st.rerun()
+        go("archive"); st.rerun()
     if st.button("mm_Экспорт", key="mm_export"):
-        _save_music_pos()
-        go("export")
-        st.rerun()
+        go("export"); st.rerun()
 
-    # Прячем mm_ кнопки
     components.html("""
     <script>
     (function() {
@@ -250,18 +159,10 @@ def screen_main_menu():
     """, height=0)
 
 
-def _save_music_pos():
-    """Сохраняем позицию музыки из query params"""
-    params = st.query_params
-    pos = params.get("music_pos", "0")
-    try:
-        st.session_state.music_position = float(pos)
-    except:
-        pass
-
 
 def screen_select_mode():
     import streamlit.components.v1 as components
+    sync_music()
 
     # Прячем нативные кнопки
     st.markdown("""
@@ -388,6 +289,7 @@ def screen_select_mode():
 
 
 def screen_select_players():
+    sync_music()
     import streamlit.components.v1 as components
     db = load_db()
 
@@ -735,6 +637,7 @@ def _finalize_players(db):
 
 def screen_assign_roles():
     import streamlit.components.v1 as components
+    sync_music()
     game = st.session_state.game
     players = game['players']
     n = len(players)
@@ -1040,7 +943,6 @@ def screen_night_zero():
         '<p style="font-size:22px;font-weight:bold;color:#fff;">Ночь 0 — Знакомство</p></div>',
         unsafe_allow_html=True
     )
-    music_player()
     st.markdown("---")
 
     remaining = _get_n0_remaining()

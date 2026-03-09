@@ -26,7 +26,6 @@ def _gist_url():
     return f"https://api.github.com/gists/{gist_id}"
 
 def load_db():
-    """Читаем БД из GitHub Gist, fallback на локальный файл"""
     try:
         r = requests.get(_gist_url(), headers=_gist_headers(), timeout=5)
         if r.status_code == 200:
@@ -34,19 +33,15 @@ def load_db():
             return json.loads(content)
     except:
         pass
-    # Fallback — локальный файл (для локальной разработки)
     if os.path.exists(DB_PATH):
         with open(DB_PATH, 'r', encoding='utf-8') as f:
             return json.load(f)
     return {"players": [], "games": [], "last_composition": []}
 
 def save_db(db):
-    """Пишем БД в GitHub Gist + локальный fallback"""
-    # Локально всегда сохраняем
     os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
     with open(DB_PATH, 'w', encoding='utf-8') as f:
         json.dump(db, f, ensure_ascii=False, indent=2)
-    # В Gist
     try:
         requests.patch(
             _gist_url(),
@@ -168,55 +163,161 @@ def inject_gold_buttons(texts=None):
     """, height=0)
 
 
-# ---- MUSIC ----
-def background_music(filename, loop=True):
+# ---- MUSIC SYSTEM ----
+SCREEN_MUSIC = {
+    "main_menu": "mus1_start_menu.mp3",
+    "select_mode": "mus1_start_menu.mp3",
+    "select_players": "mus1_start_menu.mp3",
+    "assign_roles": "mus2_assign_roles.mp3",
+    "night_zero": "mus3_hello.mp3",
+    "game_day": None,
+    "game_vote": None,
+    "game_vote_catastrophe": None,
+    "game_last_word": None,
+    "game_morning": None,
+    "game_night": "night.mp3",
+    "game_end": None,
+    "manage_players": None,
+    "archive": None,
+    "export": None,
+}
+
+
+def sync_music():
+    """Вызывать в начале каждого экрана. Сама решает что играть."""
+    screen = st.session_state.get("screen", "main_menu")
+    target_track = SCREEN_MUSIC.get(screen, None)
+    current_track = st.session_state.get("_current_music", None)
+
+    if target_track == current_track:
+        return
+
+    st.session_state._current_music = target_track
+
+    if target_track is None:
+        _fade_out_music()
+    elif current_track is None:
+        _start_music(target_track)
+    else:
+        _crossfade_music(target_track)
+
+
+def _start_music(filename):
     fn_full = os.path.join(MUSIC_FOLDER, filename)
     if not os.path.exists(fn_full):
-        st.warning(f"Файл не найден: {fn_full}")
         return
-    size_mb = os.path.getsize(fn_full) / (1024 * 1024)
-    if size_mb > 2:
-        audio_bytes = open(fn_full, 'rb').read()
-        st.audio(audio_bytes, format='audio/mp3', autoplay=True, loop=loop)
-    else:
-        audio_bytes = open(fn_full, 'rb').read()
-        b64 = base64.b64encode(audio_bytes).decode()
-        loop_js = "audio.loop = true;" if loop else ""
-        components.html(f"""
-        <script>
-        (function() {{
-            var existing = window.parent.document.getElementById('bg_music');
-            if (existing) {{
-                if (existing.dataset.file === '{filename}') return;
-                existing.pause();
-                existing.remove();
-            }}
-            var audio = document.createElement('audio');
-            audio.id = 'bg_music';
-            audio.dataset.file = '{filename}';
-            audio.src = 'data:audio/mp3;base64,{b64}';
-            {loop_js}
-            audio.volume = 0.3;
-            audio.play();
-            window.parent.document.body.appendChild(audio);
-        }})();
-        </script>
-        """, height=0)
+    with open(fn_full, 'rb') as f:
+        b64 = base64.b64encode(f.read()).decode()
+    components.html(f"""
+    <script>
+    (function() {{
+        var pd = window.parent.document;
+        var old = pd.getElementById('bg_music');
+        if (old) {{ old.pause(); old.remove(); }}
 
-def stop_background_music():
+        var a = pd.createElement('audio');
+        a.id = 'bg_music';
+        a.dataset.file = '{filename}';
+        a.src = 'data:audio/mp3;base64,{b64}';
+        a.loop = true;
+        a.volume = 0;
+        pd.body.appendChild(a);
+
+        a.play().catch(function() {{
+            pd.addEventListener('click', function tryP() {{
+                a.play().catch(function(){{}});
+                pd.removeEventListener('click', tryP);
+            }}, {{once:true}});
+        }});
+
+        var vol = 0;
+        var fi = setInterval(function() {{
+            vol += 0.02;
+            if (vol >= 0.3) {{ vol = 0.3; clearInterval(fi); }}
+            a.volume = vol;
+        }}, 50);
+    }})();
+    </script>
+    """, height=0)
+
+
+def _fade_out_music():
     components.html("""
     <script>
     (function() {
-        var audio = window.parent.document.getElementById('bg_music');
-        if (audio) { audio.pause(); audio.remove(); }
+        var a = window.parent.document.getElementById('bg_music');
+        if (!a) return;
+        var vol = a.volume;
+        var fo = setInterval(function() {
+            vol -= 0.02;
+            if (vol <= 0) {
+                vol = 0;
+                clearInterval(fo);
+                a.pause();
+                a.remove();
+            }
+            a.volume = Math.max(0, vol);
+        }, 50);
     })();
     </script>
     """, height=0)
 
 
-# ---- SOUND ----
+def _crossfade_music(new_filename):
+    fn_full = os.path.join(MUSIC_FOLDER, new_filename)
+    if not os.path.exists(fn_full):
+        _fade_out_music()
+        return
+    with open(fn_full, 'rb') as f:
+        b64 = base64.b64encode(f.read()).decode()
+    components.html(f"""
+    <script>
+    (function() {{
+        var pd = window.parent.document;
+        var old = pd.getElementById('bg_music');
+
+        if (old) {{
+            var ov = old.volume;
+            var fo = setInterval(function() {{
+                ov -= 0.02;
+                if (ov <= 0) {{
+                    clearInterval(fo);
+                    old.pause();
+                    old.remove();
+                }}
+                old.volume = Math.max(0, ov);
+            }}, 50);
+        }}
+
+        var a = pd.createElement('audio');
+        a.id = 'bg_music';
+        a.dataset.file = '{new_filename}';
+        a.src = 'data:audio/mp3;base64,{b64}';
+        a.loop = true;
+        a.volume = 0;
+        pd.body.appendChild(a);
+
+        setTimeout(function() {{
+            a.play().catch(function() {{
+                pd.addEventListener('click', function tryP() {{
+                    a.play().catch(function(){{}});
+                    pd.removeEventListener('click', tryP);
+                }}, {{once:true}});
+            }});
+            var nv = 0;
+            var fi = setInterval(function() {{
+                nv += 0.02;
+                if (nv >= 0.3) {{ nv = 0.3; clearInterval(fi); }}
+                a.volume = nv;
+            }}, 50);
+        }}, 500);
+    }})();
+    </script>
+    """, height=0)
+
+
+# ---- SOUND EFFECTS ----
 def play_sound_html(fn):
-    """Воспроизводит короткий звук через JS — не мешает фоновой музыке"""
     fn_full = os.path.join(SOUNDS_FOLDER, fn)
     if not os.path.exists(fn_full):
         return
@@ -228,93 +329,10 @@ def play_sound_html(fn):
         var a = new Audio('data:audio/mp3;base64,{b64}');
         a.volume = 1.0;
         a.play().catch(function(){{}});
-        // Самоуничтожение после воспроизведения
         a.onended = function() {{ a.remove(); }};
     }})();
     </script>
     """, height=0)
-
-def ensure_bg_music(filename, volume=0.3):
-    """Запускает фоновую музыку если ещё не играет этот трек"""
-    fn_full = os.path.join(MUSIC_FOLDER, filename)
-    if not os.path.exists(fn_full):
-        return
-    audio_bytes = open(fn_full, 'rb').read()
-    b64 = base64.b64encode(audio_bytes).decode()
-    saved_pos = st.session_state.get("music_position", 0.0)
-    components.html(f"""
-    <script>
-    (function() {{
-        var pd = window.parent.document;
-        var audio = pd.getElementById('bg_music');
-        // Если уже играет этот трек — не трогаем
-        if (audio && audio.dataset.file === '{filename}' && !audio.paused) return;
-        // Если другой трек — убираем
-        if (audio) {{ audio.pause(); audio.remove(); }}
-        // Создаём новый
-        audio = pd.createElement('audio');
-        audio.id = 'bg_music';
-        audio.dataset.file = '{filename}';
-        audio.src = 'data:audio/mp3;base64,{b64}';
-        audio.loop = true;
-        audio.volume = {volume};
-        audio.currentTime = {saved_pos};
-        pd.body.appendChild(audio);
-        audio.play().catch(function() {{
-            pd.addEventListener('click', function tryP() {{
-                audio.play().catch(function(){{}});
-                pd.removeEventListener('click', tryP);
-            }}, {{once:true}});
-        }});
-    }})();
-    </script>
-    """, height=0)
-
-
-def pause_bg_music():
-    """Пауза фоновой музыки (сохраняет позицию)"""
-    components.html("""
-    <script>
-    (function() {
-        var a = window.parent.document.getElementById('bg_music');
-        if (a && !a.paused) a.pause();
-    })();
-    </script>
-    """, height=0)
-
-
-def resume_bg_music():
-    """Продолжить фоновую музыку"""
-    components.html("""
-    <script>
-    (function() {
-        var a = window.parent.document.getElementById('bg_music');
-        if (a && a.paused) a.play().catch(function(){});
-    })();
-    </script>
-    """, height=0)
-
-def music_player():
-    files = [f for f in os.listdir(MUSIC_FOLDER) if f.endswith(".mp3")]
-    if not files:
-        return
-    if "current_track" not in st.session_state:
-        st.session_state.current_track = files[0]
-    col1, col2, col3 = st.columns([2, 1, 1])
-    with col1:
-        st.session_state.current_track = st.selectbox(
-            "🎵", files,
-            index=files.index(st.session_state.current_track) if st.session_state.current_track in files else 0,
-            key="***HIDDEN***"
-        )
-    with col2:
-        if st.button("▶️", key="music_play", use_container_width=True):
-            fn = os.path.join(MUSIC_FOLDER, st.session_state.current_track)
-            if os.path.exists(fn):
-                st.audio(open(fn, 'rb').read(), format="audio/mp3")
-    with col3:
-        if st.button("⏹️", key="music_stop", use_container_width=True):
-            pass
 
 
 # ---- NAVIGATION ----
@@ -351,6 +369,7 @@ def init_state():
         "confirm_auto_roles": False,
         "catastrophe_tied": [],
         "show_roles": False,
+        "_current_music": None,
     }
     for k, v in defaults.items():
         if k not in st.session_state:

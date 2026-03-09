@@ -3,7 +3,7 @@ import math
 import time
 from shared import (
     go, get_alive, get_speaker_order,
-    play_sound_html, METRONOME_SOUND, WHISTLE_SOUND,
+    play_sound_html, METRONOME_SOUND, WHISTLE_SOUND, sync_music,
     run_timer_no_block, role_emoji, p_num, p_name, p_bar_text
 )
 
@@ -15,8 +15,7 @@ def _toggle_roles():
 
 
 def screen_game_day():
-    from shared import stop_background_music
-    stop_background_music()
+    sync_music()
     game = st.session_state.game
     players = game['players']
     day = st.session_state.day_number
@@ -108,6 +107,10 @@ def screen_game_day():
 
     live_zone = st.empty()
     _draw_player_bars(live_zone, players, order, speaker_idx)
+
+    def _render_static_players(all_players, order, speaker_idx):
+        """Статичная отрисовка (без live_zone)"""
+        _draw_player_bars(st.empty(), all_players, order, speaker_idx)
 
     st.markdown("---")
     _render_nominations(players, order, speaker_idx, day)

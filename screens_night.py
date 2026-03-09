@@ -5,7 +5,7 @@ import time
 from datetime import datetime
 from shared import (
     load_db, save_db, get_player, go, get_alive,
-    music_player, run_timer_no_block, role_emoji,
+    sync_music, run_timer_no_block, role_emoji,
     play_sound_html, METRONOME_SOUND, WHISTLE_SOUND,
     p_num, p_name, p_bar_text
 )
@@ -14,13 +14,12 @@ GRID_COLS = 5
 
 
 def screen_game_night():
-    from shared import background_music
+    sync_music()
     game = st.session_state.game
     players = game['players']
     day = st.session_state.day_number
 
-    # Фоновая музыка ночи
-    background_music("night.mp3")
+
 
     st.markdown(
         f'<div style="text-align:center;padding:20px 0 5px;">'
@@ -28,7 +27,7 @@ def screen_game_night():
         f'<p style="font-size:22px;font-weight:bold;color:#fff;">Ночь {day}</p></div>',
         unsafe_allow_html=True
     )
-    music_player()
+    sync_music()
     st.markdown("---")
 
     if "night_kill" not in st.session_state: st.session_state.night_kill = None
@@ -207,8 +206,7 @@ def _night_grid(sorted_all, n, state_key, key_prefix, skip_role=None, emoji_sel=
 
 
 def screen_game_morning():
-    from shared import stop_background_music
-    stop_background_music()
+    sync_music()
     game = st.session_state.game
     players = game['players']
     day = st.session_state.day_number
