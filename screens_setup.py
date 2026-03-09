@@ -58,32 +58,6 @@ def screen_select_mode():
 
 def screen_select_players():
     db = load_db()
-
-    # Настройка ширины
-    if "force_width" not in st.session_state:
-        st.session_state.force_width = 700
-
-    c_w1, c_w2 = st.columns([3, 1])
-    with c_w1:
-        new_width = st.number_input("Ширина px", min_value=300, max_value=1200,
-                                     value=st.session_state.force_width, step=10, key="width_input")
-    with c_w2:
-        st.markdown("<br>", unsafe_allow_html=True)
-        if st.button("OK", key="apply_width", use_container_width=True):
-            st.session_state.force_width = new_width
-            st.rerun()
-
-    st.markdown(f"""
-    <style>
-    .stApp {{ min-width: {st.session_state.force_width}px !important; overflow-x: auto !important; }}
-    .stMain, [data-testid="stMain"] {{ min-width: {st.session_state.force_width}px !important; overflow-x: auto !important; }}
-    [data-testid="stMainBlockContainer"] {{ min-width: {st.session_state.force_width}px !important; }}
-    [data-testid="stAppViewContainer"] {{ min-width: {st.session_state.force_width}px !important; overflow-x: auto !important; }}
-    [data-testid="stHorizontalBlock"] {{ flex-wrap: nowrap !important; }}
-    </style>
-    """, unsafe_allow_html=True)
-
-    st.markdown("---")
     st.markdown(
         '<div style="text-align:center;padding:20px 0 5px;">'
         '<p style="font-size:80px;margin:0;">👥</p>'
@@ -148,6 +122,7 @@ def screen_select_players():
     if st.button("⬅️ Назад", use_container_width=True, key="players_back"):
         go("select_mode")
         st.rerun()
+
 
 
 

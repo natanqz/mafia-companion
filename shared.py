@@ -15,33 +15,25 @@ WHISTLE_SOUND = "whistle.mp3"
 
 # ---- STYLES ----
 def inject_styles():
+    # Принудительный viewport — телефон думает что экран 800px
+    components.html("""
+    <script>
+    (function() {
+        var meta = window.parent.document.querySelector('meta[name="viewport"]');
+        if (meta) {
+            meta.setAttribute('content', 'width=800, initial-scale=0.5, user-scalable=yes');
+        } else {
+            meta = document.createElement('meta');
+            meta.name = 'viewport';
+            meta.content = 'width=800, initial-scale=0.5, user-scalable=yes';
+            window.parent.document.head.appendChild(meta);
+        }
+    })();
+    </script>
+    """, height=0)
+
     st.markdown("""
     <style>
-    /* Блокируем адаптивность Streamlit */
-    .stApp {
-        min-width: 700px !important;
-        overflow-x: auto !important;
-    }
-    .stMain, [data-testid="stMain"] {
-        min-width: 700px !important;
-        overflow-x: auto !important;
-    }
-    .stMainBlockContainer, [data-testid="stMainBlockContainer"] {
-        min-width: 700px !important;
-    }
-    [data-testid="stAppViewContainer"] {
-        min-width: 700px !important;
-        overflow-x: auto !important;
-    }
-    /* Запрещаем колонкам схлопываться */
-    [data-testid="stHorizontalBlock"] {
-        flex-wrap: nowrap !important;
-        min-width: 0 !important;
-    }
-    [data-testid="column"] {
-        min-width: 0 !important;
-    }
-
     div.stButton > button {
         height: 40px;
         font-size: 16px;
@@ -115,6 +107,7 @@ def inject_styles():
     .fs-civil-for-don { background: #cc0000; color: #fff; }
     </style>
     """, unsafe_allow_html=True)
+
 
 
 def inject_gold_buttons(texts=None):
