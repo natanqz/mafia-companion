@@ -32,6 +32,8 @@ def inject_styles():
         width: auto !important;
         overflow: visible !important;
     }
+
+    /* Дефолтная кнопка */
     div.stButton > button {
         height: 38px !important;
         min-height: 38px !important;
@@ -45,13 +47,20 @@ def inject_styles():
         overflow: hidden !important;
     }
 
-    /* Классы размеров кнопок */
+    /* Большая кнопка */
+    .big-btn div.stButton > button,
+    .big-btn .stButton > button,
     .big-btn button {
         height: 70px !important;
         min-height: 70px !important;
         max-height: 70px !important;
         font-size: 24px !important;
+        padding: 8px 16px !important;
     }
+
+    /* Маленькая кнопка */
+    .small-btn div.stButton > button,
+    .small-btn .stButton > button,
     .small-btn button {
         height: 30px !important;
         min-height: 30px !important;
@@ -67,6 +76,7 @@ def inject_styles():
         margin: 0;
         padding: 10px;
     }
+
     .fullscreen-msg {
         width: 100%;
         padding: 60px 20px;
