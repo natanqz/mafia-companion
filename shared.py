@@ -14,7 +14,6 @@ METRONOME_SOUND = "metronome.mp3"
 WHISTLE_SOUND = "whistle.mp3"
 
 # ---- STYLES ----
-# ---- STYLES ----
 def inject_styles():
     gold_texts = [
         "Ночь 0", "Наступает Утро", "Наступает утро", "Никого", "Голосование",
@@ -25,7 +24,6 @@ def inject_styles():
 
     st.markdown(f"""
     <style>
-    /* Базовые стили кнопок */
     div.stButton > button {{
         height: 40px;
         font-size: 16px;
@@ -33,8 +31,6 @@ def inject_styles():
         border-radius: 8px;
         margin: 2px;
     }}
-
-    /* Таймер */
     .big-timer {{
         font-size: 96px;
         text-align: center;
@@ -42,8 +38,6 @@ def inject_styles():
         margin: 0;
         padding: 10px;
     }}
-
-    /* Плашки игроков */
     .player-bar {{
         height: 40px;
         display: flex;
@@ -71,8 +65,6 @@ def inject_styles():
         align-items: center;
         justify-content: space-between;
     }}
-
-    /* Мертвые игроки */
     .player-row-dead {{
         height: 20px;
         display: flex;
@@ -84,16 +76,12 @@ def inject_styles():
         opacity: 0.4;
         text-decoration: line-through;
     }}
-
-    /* Счётчик */
     .counter-bar {{
         position: sticky; top: 0; background: #1a1a1a;
         padding: 10px; z-index: 100; text-align: center;
         font-size: 24px; font-weight: bold; color: white;
         border-bottom: 2px solid #444;
     }}
-
-    /* Полноэкранные сообщения */
     .fullscreen-msg {{
         width: 100%;
         padding: 60px 20px;
@@ -107,26 +95,6 @@ def inject_styles():
     .fs-civil {{ background: #cc0000; color: #fff; }}
     .fs-sheriff-found {{ background: #00aa00; color: #fff; }}
     .fs-civil-for-don {{ background: #cc0000; color: #fff; }}
-
-    /* ПРИНУДИТЕЛЬНО горизонтальные колонки на мобильном */
-    @media (max-width: 640px) {{
-        [data-testid="stHorizontalBlock"] {{
-            flex-direction: row !important;
-            flex-wrap: nowrap !important;
-            gap: 4px !important;
-        }}
-        [data-testid="column"] {{
-            width: auto !important;
-            flex: 1 1 0 !important;
-            min-width: 0 !important;
-        }}
-        [data-testid="column"] div.stButton > button {{
-            font-size: 12px !important;
-            padding: 4px 2px !important;
-            min-height: 36px !important;
-            height: auto !important;
-        }}
-    }}
     </style>
 
     <script>
@@ -152,7 +120,6 @@ def inject_styles():
     observer.observe(document.body, {{ childList: true, subtree: true }});
     </script>
     """, unsafe_allow_html=True)
-
 
 def inject_gold_buttons(texts=None):
     if texts is None:
