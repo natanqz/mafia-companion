@@ -406,114 +406,82 @@ def _crossfade_music(new_filename):
 # ---- SOUND EFFECTS ----
 
 def preload_sounds():
-    """Создаёт audio элементы в parent document."""
-    sounds_js = ""
+    """Кеширует base64 звуков в session_state."""
+    if st.session_state.get("_timer_sounds_cached"):
+        return
     for fn in [TIMER_60_SOUND, TIMER_30_SOUND]:
         fn_full = os.path.join(SOUNDS_FOLDER, fn)
         if os.path.exists(fn_full):
             with open(fn_full, 'rb') as f:
-                b64 = base64.b64encode(f.read()).decode()
-            safe = fn.replace('.', '_')
-            sounds_js += f"""
-                if (!pd.getElementById('snd_{safe}')) {{
-                    var a_{safe} = pd.createElement('audio');
-                    a_{safe}.id = 'snd_{safe}';
-                    a_{safe}.src = 'data:audio/mp3;base64,{b64}';
-                    a_{safe}.preload = 'auto';
-                    a_{safe}.volume = 1.0;
-                    pd.body.appendChild(a_{safe});
-                }}
-            """
-
-    if not sounds_js:
-        return
-
-    components.html(f"""
-    <script>
-    (function() {{
-        var pd = window.parent.document;
-        var pw = window.parent.window;
-        {sounds_js}
-
-        pw._mafiaPlayTimer = function(name) {{
-            pw._mafiaStopTimer();
-            var el = pd.getElementById('snd_' + name);
-            if (el) {{
-                el.currentTime = 0;
-                var p = el.play();
-                if (p && p.catch) p.catch(function(){{}});
-            }}
-        }};
-
-        pw._mafiaStopTimer = function() {{
-            var snds = pd.querySelectorAll('audio[id^="snd_timer_"]');
-            snds.forEach(function(el) {{
-                el.pause();
-                el.currentTime = 0;
-            }});
-        }};
-
-        pw._mafiaResetTimer = function(name) {{
-            pw._mafiaStopTimer();
-            var el = pd.getElementById('snd_' + name);
-            if (el) {{
-                el.currentTime = 0;
-                var p = el.play();
-                if (p && p.catch) p.catch(function(){{}});
-            }}
-        }};
-    }})();
-    </script>
-    """, height=0)
+                st.session_state[f"_snd_b64_{fn}"] = base64.b64encode(f.read()).decode()
+    st.session_state._timer_sounds_cached = True
 
 
 def play_timer_sound(duration=60):
-    """Запускает комбинированный звуковой файл таймера."""
+    """Запускает звуковой файл таймера — создаёт audio в parent document."""
     if not st.session_state.get("timer_sound_enabled", True):
         return
     fn = TIMER_60_SOUND if duration == 60 else TIMER_30_SOUND
+    b64 = st.session_state.get(f"_snd_b64_{fn}")
+    if not b64:
+        return
     safe = fn.replace('.', '_')
     components.html(f"""
     <script>
     (function() {{
-        var pw = window.parent.window;
-        if (pw && pw._mafiaPlayTimer) {{
-            pw._mafiaPlayTimer('{safe}');
-        }}
+        var pd = window.parent.document;
+        // Останавливаем предыдущий
+        var old = pd.getElementById('timer_audio');
+        if (old) {{ old.pause(); old.remove(); }}
+        // Создаём новый
+        var a = pd.createElement('audio');
+        a.id = 'timer_audio';
+        a.src = 'data:audio/mp3;base64,{b64}';
+        a.volume = 1.0;
+        pd.body.appendChild(a);
+        a.play().catch(function(){{}});
     }})();
     </script>
     """, height=0)
+
 
 def stop_timer_sound():
     """Останавливает звук таймера."""
     components.html("""
     <script>
     (function() {
-        var pw = window.parent.window;
-        if (pw && pw._mafiaStopTimer) {
-            pw._mafiaStopTimer();
-        }
+        var pd = window.parent.document;
+        var a = pd.getElementById('timer_audio');
+        if (a) { a.pause(); a.currentTime = 0; }
     })();
     </script>
     """, height=0)
 
 
 def reset_timer_sound(duration=60):
-    """Сбрасывает звук таймера на начало."""
+    """Сбрасывает звук таймера — останавливает и запускает заново."""
     if not st.session_state.get("timer_sound_enabled", True):
         return
     fn = TIMER_60_SOUND if duration == 60 else TIMER_30_SOUND
-    safe = fn.replace('.', '_')
+    b64 = st.session_state.get(f"_snd_b64_{fn}")
+    if not b64:
+        return
     components.html(f"""
     <script>
     (function() {{
-        var pw = window.parent.window;
-        if (pw && pw._mafiaResetTimer) {{
-            pw._mafiaResetTimer('{safe}');
-        }}
+        var pd = window.parent.document;
+        var old = pd.getElementById('timer_audio');
+        if (old) {{ old.pause(); old.remove(); }}
+        var a = pd.createElement('audio');
+        a.id = 'timer_audio';
+        a.src = 'data:audio/mp3;base64,{b64}';
+        a.volume = 1.0;
+        pd.body.appendChild(a);
+        a.play().catch(function(){{}});
     }})();
     </script>
     """, height=0)
+
 
 def play_sound_html(fn):
     """Оставляем для обратной совместимости — не используется для таймеров."""
@@ -662,6 +630,7 @@ def init_state():
         "_current_music": None,
         "music_enabled": True,
         "timer_sound_enabled": True,
+        "_timer_sounds_cached": False,
     }
     for k, v in defaults.items():
         if k not in st.session_state:
