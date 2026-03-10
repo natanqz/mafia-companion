@@ -1,4 +1,5 @@
 import streamlit as st
+import streamlit.components.v1 as components
 import json
 import math
 import time
@@ -311,11 +312,24 @@ def _run_morning_timer(timer_ph):
     start = st.session_state.morning_timer_start
     total = st.session_state.morning_timer_duration
     if start is None: return
+
+    import streamlit.components.v1 as components
+    from shared import METRONOME_SOUND, WHISTLE_SOUND
+
     while True:
         elapsed = time.time() - start
         sec = max(0, total - int(elapsed))
         progress = min(100, int(((total - sec) / max(total, 1)) * 100))
         color = "white" if sec > 10 else "red"
+
+        sound_js = ""
+        if sec <= 10 and sec > 0:
+            safe = METRONOME_SOUND.replace('.', '_')
+            sound_js = f"if (pw._mafiaPlaySound) pw._mafiaPlaySound('{safe}');"
+        elif sec == 0:
+            safe = WHISTLE_SOUND.replace('.', '_')
+            sound_js = f"if (pw._mafiaPlaySound) pw._mafiaPlaySound('{safe}');"
+
         timer_ph.markdown(f'''
         <div style="text-align:center;">
             <p style="font-size:72px;font-weight:bold;margin:0;color:{color};line-height:1;">{sec}</p>
@@ -323,11 +337,19 @@ def _run_morning_timer(timer_ph):
                 <div style="background:#4CAF50;width:{progress}%;height:100%;border-radius:6px;"></div>
             </div>
         </div>''', unsafe_allow_html=True)
-        if sec <= 10 and sec > 0: play_sound_html(METRONOME_SOUND)
-        if sec == 0: play_sound_html(WHISTLE_SOUND)
+
+        if sound_js:
+            components.html(f"""
+            <script>
+            (function() {{
+                var pw = window.parent.window;
+                {sound_js}
+            }})();
+            </script>
+            """, height=0)
+
         time.sleep(2)
         break
-
 
 
 def _go_next_day(day):

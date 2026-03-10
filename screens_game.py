@@ -990,12 +990,27 @@ def _run_cat_timer_loop(timer_display, live_zone, players, tied, prev_voters, sp
         _draw_cat_timer(timer_display, sec)
         html = _build_cat_bars_html(players, tied, prev_voters, speaker_idx)
         live_zone.markdown(html, unsafe_allow_html=True)
-        if sec <= 10 and sec > 0: play_sound_html(METRONOME_SOUND)
-        if sec == 0: play_sound_html(WHISTLE_SOUND)
+
+        sound_js = ""
+        if sec <= 10 and sec > 0:
+            safe = METRONOME_SOUND.replace('.', '_')
+            sound_js = f"if (pw._mafiaPlaySound) pw._mafiaPlaySound('{safe}');"
+        elif sec == 0:
+            safe = WHISTLE_SOUND.replace('.', '_')
+            sound_js = f"if (pw._mafiaPlaySound) pw._mafiaPlaySound('{safe}');"
+
+        if sound_js:
+            components.html(f"""
+            <script>
+            (function() {{
+                var pw = window.parent.window;
+                {sound_js}
+            }})();
+            </script>
+            """, height=0)
+
         time.sleep(2)
         break
-
-
 
 def _reset_cat():
     st.session_state.cat_speaker_idx = 0
@@ -1022,6 +1037,15 @@ def _run_lw_timer(timer_ph):
         sec = max(0, total - int(elapsed))
         progress = min(100, int(((total - sec) / max(total, 1)) * 100))
         color = "white" if sec > 10 else "red"
+
+        sound_js = ""
+        if sec <= 10 and sec > 0:
+            safe = METRONOME_SOUND.replace('.', '_')
+            sound_js = f"if (pw._mafiaPlaySound) pw._mafiaPlaySound('{safe}');"
+        elif sec == 0:
+            safe = WHISTLE_SOUND.replace('.', '_')
+            sound_js = f"if (pw._mafiaPlaySound) pw._mafiaPlaySound('{safe}');"
+
         timer_ph.markdown(f'''
             <div style="text-align:center;">
                 <p style="font-size:72px;font-weight:bold;margin:0;color:{color};line-height:1;">{sec}</p>
@@ -1029,10 +1053,20 @@ def _run_lw_timer(timer_ph):
                     <div style="background:#4CAF50;width:{progress}%;height:100%;border-radius:6px;"></div>
                 </div>
             </div>''', unsafe_allow_html=True)
-        if sec <= 10 and sec > 0: play_sound_html(METRONOME_SOUND)
-        if sec == 0: play_sound_html(WHISTLE_SOUND)
+
+        if sound_js:
+            components.html(f"""
+            <script>
+            (function() {{
+                var pw = window.parent.window;
+                {sound_js}
+            }})();
+            </script>
+            """, height=0)
+
         time.sleep(2)
         break
+
 
 
 def _finish_last_word(day):
