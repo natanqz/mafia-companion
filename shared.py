@@ -406,47 +406,93 @@ def _crossfade_music(new_filename):
 # ---- SOUND EFFECTS ----
 
 def preload_sounds():
-    """Кеширует base64 звуков в session_state."""
+    """Кеширует base64 и создаёт audio элементы при первом касании."""
     if st.session_state.get("_timer_sounds_cached"):
         return
+
+    b64_data = {}
     for fn in [TIMER_60_SOUND, TIMER_30_SOUND]:
         fn_full = os.path.join(SOUNDS_FOLDER, fn)
-        exists = os.path.exists(fn_full)
-        if exists:
-            size = os.path.getsize(fn_full)
+        if os.path.exists(fn_full):
             with open(fn_full, 'rb') as f:
                 b64 = base64.b64encode(f.read()).decode()
             st.session_state[f"_snd_b64_{fn}"] = b64
-            st.toast(f"✅ {fn}: {size} bytes, b64={len(b64)}")
-        else:
-            st.toast(f"❌ {fn} NOT FOUND at {fn_full}")
+            b64_data[fn] = b64
+
     st.session_state._timer_sounds_cached = True
+
+    if not b64_data:
+        return
+
+    # Создаём audio элементы в parent + unlock при первом касании
+    js_create = ""
+    for fn, b64 in b64_data.items():
+        safe = fn.replace('.', '_')
+        js_create += f"""
+            if (!pd.getElementById('snd_{safe}')) {{
+                var a = pd.createElement('audio');
+                a.id = 'snd_{safe}';
+                a.src = 'data:audio/mp3;base64,{b64}';
+                a.preload = 'auto';
+                a.volume = 1.0;
+                a.load();
+                pd.body.appendChild(a);
+            }}
+        """
+
+    components.html(f"""
+    <script>
+    (function() {{
+        var pd = window.parent.document;
+        var pw = window.parent.window;
+
+        {js_create}
+
+        // Unlock на первое касание — iOS требует
+        if (!pw._mafia_snd_unlocked) {{
+            function unlockAudio() {{
+                pw._mafia_snd_unlocked = true;
+                var ids = ['snd_timer_60_mp3', 'snd_timer_30_mp3'];
+                ids.forEach(function(id) {{
+                    var el = pd.getElementById(id);
+                    if (el) {{
+                        el.play().then(function() {{
+                            el.pause();
+                            el.currentTime = 0;
+                        }}).catch(function(){{}});
+                    }}
+                }});
+                pd.removeEventListener('touchstart', unlockAudio);
+                pd.removeEventListener('touchend', unlockAudio);
+                pd.removeEventListener('click', unlockAudio);
+            }}
+            pd.addEventListener('touchstart', unlockAudio, {{once: false}});
+            pd.addEventListener('touchend', unlockAudio, {{once: false}});
+            pd.addEventListener('click', unlockAudio, {{once: false}});
+        }}
+    }})();
+    </script>
+    """, height=0)
 
 
 def play_timer_sound(duration=60):
-    """Ставит флаг — звук запустится после rerun."""
     if not st.session_state.get("timer_sound_enabled", True):
         return
     st.session_state._play_timer_pending = duration
 
 
-
 def stop_timer_sound():
-    """Ставит флаг на остановку."""
     st.session_state._play_timer_pending = "stop"
 
 
-
-
 def reset_timer_sound(duration=60):
-    """Ставит флаг на сброс."""
     if not st.session_state.get("timer_sound_enabled", True):
         return
     st.session_state._play_timer_pending = f"reset_{duration}"
 
 
 def _execute_pending_sound():
-    """Выполняет отложенный звук."""
+    """Выполняет отложенный звук через уже созданные audio элементы."""
     pending = st.session_state.get("_play_timer_pending")
     if not pending:
         return
@@ -457,8 +503,10 @@ def _execute_pending_sound():
         <script>
         (function() {
             var pd = window.parent.document;
-            var a = pd.getElementById('timer_audio');
-            if (a) { a.pause(); a.currentTime = 0; }
+            ['snd_timer_60_mp3', 'snd_timer_30_mp3'].forEach(function(id) {
+                var a = pd.getElementById(id);
+                if (a) { a.pause(); a.currentTime = 0; }
+            });
         })();
         </script>
         """, height=0)
@@ -470,36 +518,31 @@ def _execute_pending_sound():
         dur = int(pending)
 
     fn = TIMER_60_SOUND if dur == 60 else TIMER_30_SOUND
-    b64 = st.session_state.get(f"_snd_b64_{fn}")
-
-    if not b64:
-        st.toast(f"❌ No b64 for {fn}")
-        return
-
-    st.toast(f"🔊 Playing {fn}, b64 len={len(b64)}")
+    safe = fn.replace('.', '_')
 
     components.html(f"""
     <script>
     (function() {{
         var pd = window.parent.document;
-        var old = pd.getElementById('timer_audio');
-        if (old) {{ old.pause(); old.remove(); }}
-        var a = pd.createElement('audio');
-        a.id = 'timer_audio';
-        a.src = 'data:audio/mp3;base64,{b64}';
-        a.volume = 1.0;
-        pd.body.appendChild(a);
-        var p = a.play();
-        if (p && p.then) {{
-            p.then(function() {{
-                console.log('TIMER AUDIO PLAYING');
-            }}).catch(function(e) {{
-                console.log('TIMER AUDIO BLOCKED:', e);
+
+        // Останавливаем оба
+        ['snd_timer_60_mp3', 'snd_timer_30_mp3'].forEach(function(id) {{
+            var a = pd.getElementById(id);
+            if (a) {{ a.pause(); a.currentTime = 0; }}
+        }});
+
+        // Запускаем нужный
+        var el = pd.getElementById('snd_{safe}');
+        if (el) {{
+            el.currentTime = 0;
+            el.play().catch(function(e) {{
+                console.log('Timer sound blocked:', e);
             }});
         }}
     }})();
     </script>
     """, height=0)
+
 
 
 def play_sound_html(fn):
