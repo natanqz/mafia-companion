@@ -534,59 +534,56 @@ def inject_audio_controls():
     timer_border = "#4CAF50" if timer_on else "#662222"
 
     components.html(f"""
-    <style>
-        .audio-controls {{
-            position: fixed;
-            top: 60px;
-            left: 10px;
-            z-index: 99999;
-            display: flex;
-            flex-direction: column;
-            gap: 6px;
-        }}
-        .ac-btn {{
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            border: 2px solid;
-            font-size: 18px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: transform 0.12s;
-            -webkit-tap-highlight-color: transparent;
-        }}
-        .ac-btn:active {{ transform: scale(0.85); }}
-    </style>
-    <div class="audio-controls">
-        <button class="ac-btn" id="btnMusic"
-            style="background:{music_bg};border-color:{music_border};"
-            onclick="clickAC('ac_Музыка')">{music_icon}</button>
-        <button class="ac-btn" id="btnTimer"
-            style="background:{timer_bg};border-color:{timer_border};"
-            onclick="clickAC('ac_Метроном')">{timer_icon}</button>
-    </div>
     <script>
-    function clickAC(text) {{
-        const buttons = window.parent.document.querySelectorAll('button');
-        for (let b of buttons) {{
-            if (b.textContent.includes(text)) {{
-                b.style.opacity = '1';
-                b.style.pointerEvents = 'auto';
-                b.click();
-                return;
+    (function() {{
+        var pd = window.parent.document;
+
+        // Удаляем старые если есть
+        var old = pd.getElementById('audio-controls-wrap');
+        if (old) old.remove();
+
+        // Создаём контейнер в parent
+        var wrap = pd.createElement('div');
+        wrap.id = 'audio-controls-wrap';
+        wrap.style.cssText = 'position:fixed;top:60px;left:10px;z-index:99999;display:flex;flex-direction:column;gap:6px;';
+
+        var btnMusic = pd.createElement('button');
+        btnMusic.id = 'ac-btn-music';
+        btnMusic.textContent = '{music_icon}';
+        btnMusic.style.cssText = 'width:40px;height:40px;border-radius:50%;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;background:{music_bg};border:2px solid {music_border};-webkit-tap-highlight-color:transparent;';
+        btnMusic.onclick = function() {{
+            var buttons = pd.querySelectorAll('button');
+            for (var b of buttons) {{
+                if (b.textContent.includes('ac_Музыка')) {{
+                    b.click(); return;
+                }}
             }}
-        }}
-    }}
+        }};
+
+        var btnTimer = pd.createElement('button');
+        btnTimer.id = 'ac-btn-timer';
+        btnTimer.textContent = '{timer_icon}';
+        btnTimer.style.cssText = 'width:40px;height:40px;border-radius:50%;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;background:{timer_bg};border:2px solid {timer_border};-webkit-tap-highlight-color:transparent;';
+        btnTimer.onclick = function() {{
+            var buttons = pd.querySelectorAll('button');
+            for (var b of buttons) {{
+                if (b.textContent.includes('ac_Метроном')) {{
+                    b.click(); return;
+                }}
+            }}
+        }};
+
+        wrap.appendChild(btnMusic);
+        wrap.appendChild(btnTimer);
+        pd.body.appendChild(wrap);
+    }})();
     </script>
     """, height=0)
 
-    # Скрытые кнопки
+    # Скрытые кнопки Streamlit
     if st.button("ac_Музыка", key="ac_music_toggle"):
         st.session_state.music_enabled = not st.session_state.get("music_enabled", True)
         if not st.session_state.music_enabled:
-            # Остановить музыку
             components.html("""
             <script>
             (function() {
@@ -599,7 +596,6 @@ def inject_audio_controls():
             </script>
             """, height=0)
         else:
-            # Перезапустить музыку — сбрасываем трек чтобы sync_music подхватил
             st.session_state._current_music = None
         st.rerun()
 
@@ -628,7 +624,6 @@ def inject_audio_controls():
     })();
     </script>
     """, height=0)
-
 
 # ---- NAVIGATION ----
 def go(screen):
