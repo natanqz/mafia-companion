@@ -187,19 +187,35 @@ SCREEN_MUSIC = {
 
 def sync_music():
     """Управление фоновой музыкой через SCREEN_MUSIC словарь."""
+    if not st.session_state.get("music_enabled", True):
+        # Музыка выключена — останавливаем если играет
+        prev = st.session_state.get("_current_music")
+        if prev is not None:
+            components.html("""
+            <script>
+            (function() {
+                var pd = window.parent.document;
+                var old = pd.getElementById('bg_music');
+                if (old) { old.pause(); old.remove(); }
+                var audios = pd.querySelectorAll('audio.bg-music');
+                audios.forEach(function(a) { a.pause(); a.remove(); });
+            })();
+            </script>
+            """, height=0)
+            st.session_state._current_music = None
+        return
+
     scr = st.session_state.get("screen", "")
     track = SCREEN_MUSIC.get(scr)
 
     prev = st.session_state.get("_current_music")
 
-    # Если трек не изменился — не трогаем
     if track == prev:
         return
 
     st.session_state._current_music = track
 
     if track is None:
-        # Остановить всю музыку
         components.html("""
         <script>
         (function() {
@@ -227,13 +243,11 @@ def sync_music():
     (function() {{
         var pd = window.parent.document;
 
-        // Останавливаем ВСЕ предыдущие
         var old = pd.getElementById('bg_music');
         if (old) {{ old.pause(); old.remove(); }}
         var audios = pd.querySelectorAll('audio.bg-music');
         audios.forEach(function(a) {{ a.pause(); a.remove(); }});
 
-        // Создаём новый
         var a = pd.createElement('audio');
         a.className = 'bg-music';
         a.id = 'bg_music';
@@ -244,7 +258,6 @@ def sync_music():
         a.preload = 'auto';
         pd.body.appendChild(a);
 
-        // Fade in
         var playPromise = a.play();
         if (playPromise !== undefined) {{
             playPromise.then(function() {{
@@ -274,6 +287,7 @@ def sync_music():
     }})();
     </script>
     """, height=0)
+
 
 
 def _start_music(filename):
@@ -455,6 +469,8 @@ def preload_sounds():
 
 def play_timer_sound(duration=60):
     """Запускает комбинированный звуковой файл таймера."""
+    if not st.session_state.get("timer_sound_enabled", True):
+        return
     fn = TIMER_60_SOUND if duration == 60 else TIMER_30_SOUND
     safe = fn.replace('.', '_')
     components.html(f"""
@@ -467,7 +483,6 @@ def play_timer_sound(duration=60):
     }})();
     </script>
     """, height=0)
-
 
 def stop_timer_sound():
     """Останавливает звук таймера."""
@@ -485,6 +500,8 @@ def stop_timer_sound():
 
 def reset_timer_sound(duration=60):
     """Сбрасывает звук таймера на начало."""
+    if not st.session_state.get("timer_sound_enabled", True):
+        return
     fn = TIMER_60_SOUND if duration == 60 else TIMER_30_SOUND
     safe = fn.replace('.', '_')
     components.html(f"""
@@ -498,10 +515,120 @@ def reset_timer_sound(duration=60):
     </script>
     """, height=0)
 
-
 def play_sound_html(fn):
     """Оставляем для обратной совместимости — не используется для таймеров."""
     pass
+
+
+def inject_audio_controls():
+    """Две кнопки-иконки в левом верхнем углу: музыка и метроном."""
+    music_on = st.session_state.get("music_enabled", True)
+    timer_on = st.session_state.get("timer_sound_enabled", True)
+
+    music_icon = "🎵" if music_on else "🔇"
+    timer_icon = "⏱️" if timer_on else "🔕"
+
+    music_bg = "#1a3a1a" if music_on else "#3a1a1a"
+    timer_bg = "#1a3a1a" if timer_on else "#3a1a1a"
+    music_border = "#4CAF50" if music_on else "#662222"
+    timer_border = "#4CAF50" if timer_on else "#662222"
+
+    components.html(f"""
+    <style>
+        .audio-controls {{
+            position: fixed;
+            top: 60px;
+            left: 10px;
+            z-index: 99999;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }}
+        .ac-btn {{
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border: 2px solid;
+            font-size: 18px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.12s;
+            -webkit-tap-highlight-color: transparent;
+        }}
+        .ac-btn:active {{ transform: scale(0.85); }}
+    </style>
+    <div class="audio-controls">
+        <button class="ac-btn" id="btnMusic"
+            style="background:{music_bg};border-color:{music_border};"
+            onclick="clickAC('ac_Музыка')">{music_icon}</button>
+        <button class="ac-btn" id="btnTimer"
+            style="background:{timer_bg};border-color:{timer_border};"
+            onclick="clickAC('ac_Метроном')">{timer_icon}</button>
+    </div>
+    <script>
+    function clickAC(text) {{
+        const buttons = window.parent.document.querySelectorAll('button');
+        for (let b of buttons) {{
+            if (b.textContent.includes(text)) {{
+                b.style.opacity = '1';
+                b.style.pointerEvents = 'auto';
+                b.click();
+                return;
+            }}
+        }}
+    }}
+    </script>
+    """, height=0)
+
+    # Скрытые кнопки
+    if st.button("ac_Музыка", key="ac_music_toggle"):
+        st.session_state.music_enabled = not st.session_state.get("music_enabled", True)
+        if not st.session_state.music_enabled:
+            # Остановить музыку
+            components.html("""
+            <script>
+            (function() {
+                var pd = window.parent.document;
+                var a = pd.getElementById('bg_music');
+                if (a) { a.pause(); }
+                var audios = pd.querySelectorAll('audio.bg-music');
+                audios.forEach(function(el) { el.pause(); });
+            })();
+            </script>
+            """, height=0)
+        else:
+            # Перезапустить музыку — сбрасываем трек чтобы sync_music подхватил
+            st.session_state._current_music = None
+        st.rerun()
+
+    if st.button("ac_Метроном", key="ac_timer_toggle"):
+        st.session_state.timer_sound_enabled = not st.session_state.get("timer_sound_enabled", True)
+        if not st.session_state.timer_sound_enabled:
+            stop_timer_sound()
+        st.rerun()
+
+    # Прячем ac_ кнопки
+    components.html("""
+    <script>
+    (function() {
+        function hide() {
+            const buttons = window.parent.document.querySelectorAll('button');
+            buttons.forEach(b => {
+                if ((b.textContent || '').startsWith('ac_')) {
+                    const w = b.closest('div[data-testid="stButton"]');
+                    if (w) w.style.cssText = 'height:0!important;min-height:0!important;overflow:hidden!important;margin:0!important;padding:0!important;opacity:0!important;position:absolute!important;pointer-events:none!important;';
+                }
+            });
+        }
+        setTimeout(hide, 50);
+        setTimeout(hide, 200);
+        setTimeout(hide, 500);
+    })();
+    </script>
+    """, height=0)
+
 
 # ---- NAVIGATION ----
 def go(screen):
@@ -538,6 +665,8 @@ def init_state():
         "catastrophe_tied": [],
         "show_roles": False,
         "_current_music": None,
+        "music_enabled": True,
+        "timer_sound_enabled": True,
     }
     for k, v in defaults.items():
         if k not in st.session_state:
