@@ -159,7 +159,6 @@ def screen_main_menu():
     """, height=0)
 
 
-
 def screen_select_mode():
     import streamlit.components.v1 as components
     sync_music()
@@ -285,7 +284,6 @@ def screen_select_mode():
     }
     </script>
     """, height=500)
-
 
 
 def screen_select_players():
@@ -876,7 +874,6 @@ def screen_assign_roles():
     """, height=0)
 
 
-
 def _do_auto_assign(players, roles):
     role_list = []
     for role, cnt in roles.items():
@@ -1239,21 +1236,18 @@ def _run_n0_live():
         else:
             color = "#ff2222"
 
-        # Обновляем circle + text + кнопку через JS
-        morning_js = ""
-        if sec == 0:
-            morning_js = """
-                if (btn) {
-                    btn.style.background = 'linear-gradient(135deg,#e67e22,#d35400)';
-                    btn.style.color = '#fff';
-                    btn.style.boxShadow = '0 0 20px rgba(230,126,34,0.5)';
-                    btn.style.border = 'none';
-                }
-            """
+        sound_js = ""
+        if sec <= 10 and sec > 0:
+            safe = METRONOME_SOUND.replace('.', '_')
+            sound_js = f"if (pw._mafiaPlaySound) pw._mafiaPlaySound('{safe}');"
+        elif sec == 0:
+            safe = WHISTLE_SOUND.replace('.', '_')
+            sound_js = f"if (pw._mafiaPlaySound) pw._mafiaPlaySound('{safe}');"
 
         components.html(f"""
         <script>
         (function() {{
+            var pw = window.parent.window;
             var pd = window.parent.document;
             var frames = pd.querySelectorAll('iframe');
             for (var f of frames) {{
@@ -1267,143 +1261,25 @@ def _run_n0_live():
                         circle.setAttribute('stroke', '{color}');
                         text.style.color = '{color}';
                         text.textContent = '{sec}';
-                        {morning_js}
+                        if ({1 if sec == 0 else 0} && btn) {{
+                            btn.style.background = 'linear-gradient(135deg,#e67e22,#d35400)';
+                            btn.style.color = '#fff';
+                            btn.style.boxShadow = '0 0 20px rgba(230,126,34,0.5)';
+                            btn.style.border = 'none';
+                        }}
                         break;
                     }}
                 }} catch(e) {{}}
             }}
+            {sound_js}
         }})();
         </script>
         """, height=0)
 
-        if sec <= 10 and sec > 0:
-            play_sound_html(METRONOME_SOUND)
         if sec == 0:
-            play_sound_html(WHISTLE_SOUND)
-            time.sleep(2)  # ← даём свистку отыграть!
             st.session_state.n0_phase = "done"
             st.session_state.n0_timer_start = None
-            st.rerun()
-            break
-
-        time.sleep(1)
-
-
-def _run_n0_live():
-    start = st.session_state.n0_timer_start
-    total = st.session_state.n0_seconds
-    if not start:
-        return
-
-    while True:
-        elapsed = time.time() - start
-        sec = max(0, total - int(elapsed))
-        progress_pct = min(100, int(((total - sec) / max(total, 1)) * 100))
-        dash_offset = 565.49 * (1 - progress_pct / 100)
-
-        if sec > 10:
-            color = "#4CAF50"
-        elif sec > 5:
-            color = "#ff8c00"
-        else:
-            color = "#ff2222"
-
-        components.html(f"""
-        <script>
-        (function() {{
-            var pd = window.parent.document;
-            var frames = pd.querySelectorAll('iframe');
-            for (var f of frames) {{
-                try {{
-                    var doc = f.contentDocument || f.contentWindow.document;
-                    var circle = doc.getElementById('progressCircle');
-                    var text = doc.getElementById('timerText');
-                    var btn = doc.getElementById('btnMorning');
-                    if (circle && text) {{
-                        circle.style.strokeDashoffset = '{dash_offset}';
-                        circle.style.stroke = '{color}';
-                        text.style.color = '{color}';
-                        text.textContent = '{sec}';
-                    }}
-                    if (btn && {sec} === 0) {{
-                        btn.style.background = 'linear-gradient(135deg,#e67e22,#d35400)';
-                        btn.style.color = '#fff';
-                        btn.style.boxShadow = '0 0 20px rgba(230,126,34,0.5)';
-                        btn.style.border = 'none';
-                    }}
-                }} catch(e) {{}}
-            }}
-        }})();
-        </script>
-        """, height=0)
-
-        if sec <= 10 and sec > 0:
-            play_sound_html(METRONOME_SOUND)
-        if sec == 0:
-            play_sound_html(WHISTLE_SOUND)
-            time.sleep(2)  # ← даём свистку отыграть!
-            st.session_state.n0_phase = "done"
-            st.session_state.n0_timer_start = None
-            st.rerun()
-            break
-
-        time.sleep(1)
-
-
-def _run_n0_live():
-    """Живое обновление кругового таймера + звуки"""
-    start = st.session_state.n0_timer_start
-    total = st.session_state.n0_seconds
-    if not start:
-        return
-
-    # Создаём placeholder для обновления таймера через JS
-    timer_ph = st.empty()
-
-    while True:
-        elapsed = time.time() - start
-        sec = max(0, total - int(elapsed))
-        progress_pct = min(100, int(((total - sec) / max(total, 1)) * 100))
-        dash_offset = 628.32 * (1 - progress_pct / 100)
-
-        if sec > 10:
-            color = "#4CAF50"
-        elif sec > 5:
-            color = "#ff8c00"
-        else:
-            color = "#ff2222"
-
-        # Обновляем через JS (не пересоздаём HTML)
-        components.html(f"""
-        <script>
-        (function() {{
-            var pd = window.parent.document;
-            var frames = pd.querySelectorAll('iframe');
-            for (var f of frames) {{
-                try {{
-                    var doc = f.contentDocument || f.contentWindow.document;
-                    var circle = doc.getElementById('progressCircle');
-                    var text = doc.getElementById('timerText');
-                    if (circle && text) {{
-                        circle.style.strokeDashoffset = '{dash_offset}';
-                        circle.style.stroke = '{color}';
-                        text.style.color = '{color}';
-                        text.textContent = '{sec}';
-                        break;
-                    }}
-                }} catch(e) {{}}
-            }}
-        }})();
-        </script>
-        """, height=0)
-
-        if sec <= 10 and sec > 0:
-            play_sound_html(METRONOME_SOUND)
-        if sec == 0:
-            play_sound_html(WHISTLE_SOUND)
-            time.sleep(2)  # ← даём свистку отыграть!
-            st.session_state.n0_phase = "done"
-            st.session_state.n0_timer_start = None
+            time.sleep(1.5)
             st.rerun()
             break
 
@@ -1439,7 +1315,6 @@ def _run_n0_timer(timer_ph):
         if sec == 0: play_sound_html(WHISTLE_SOUND)
         time.sleep(2)  # ← даём свистку отыграть!
         break
-
 
 
 def screen_players_list():
