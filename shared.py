@@ -184,14 +184,9 @@ SCREEN_MUSIC = {
 
 
 def sync_music():
-    """Управление фоновой музыкой — останавливает старые треки перед запуском нового."""
+    """Управление фоновой музыкой через SCREEN_MUSIC словарь."""
     scr = st.session_state.get("screen", "")
-    if scr in ("game_night", "night_zero"):
-        track = NIGHT_MUSIC
-    elif scr in ("game_day", "game_vote", "game_vote_catastrophe", "game_last_word"):
-        track = DAY_MUSIC
-    else:
-        track = None
+    track = SCREEN_MUSIC.get(scr)
 
     prev = st.session_state.get("_current_music")
 
@@ -207,6 +202,8 @@ def sync_music():
         <script>
         (function() {
             var pd = window.parent.document;
+            var old = pd.getElementById('bg_music');
+            if (old) { old.pause(); old.remove(); }
             var audios = pd.querySelectorAll('audio.bg-music');
             audios.forEach(function(a) { a.pause(); a.remove(); });
         })();
@@ -214,7 +211,7 @@ def sync_music():
         """, height=0)
         return
 
-    fn = os.path.join(SOUNDS_FOLDER, track)
+    fn = os.path.join(MUSIC_FOLDER, track)
     if not os.path.exists(fn):
         return
 
@@ -228,31 +225,43 @@ def sync_music():
     (function() {{
         var pd = window.parent.document;
 
-        // Останавливаем и удаляем ВСЕ предыдущие bg-music
-        var old = pd.querySelectorAll('audio.bg-music');
-        old.forEach(function(a) {{
-            a.pause();
-            a.currentTime = 0;
-            a.remove();
-        }});
+        // Останавливаем ВСЕ предыдущие
+        var old = pd.getElementById('bg_music');
+        if (old) {{ old.pause(); old.remove(); }}
+        var audios = pd.querySelectorAll('audio.bg-music');
+        audios.forEach(function(a) {{ a.pause(); a.remove(); }});
 
         // Создаём новый
         var a = pd.createElement('audio');
         a.className = 'bg-music';
-        a.id = 'bgm_{safe_name}';
+        a.id = 'bg_music';
+        a.dataset.file = '{track}';
         a.src = 'data:audio/mp3;base64,{b64}';
         a.loop = true;
-        a.volume = 0.3;
+        a.volume = 0;
         a.preload = 'auto';
         pd.body.appendChild(a);
 
-        // Пробуем играть (может потребовать жест на мобильных)
+        // Fade in
         var playPromise = a.play();
         if (playPromise !== undefined) {{
-            playPromise.catch(function() {{
-                // Autoplay заблокирован — ждём первый тач
+            playPromise.then(function() {{
+                var vol = 0;
+                var fi = setInterval(function() {{
+                    vol += 0.02;
+                    if (vol >= 0.3) {{ vol = 0.3; clearInterval(fi); }}
+                    a.volume = vol;
+                }}, 50);
+            }}).catch(function() {{
                 function resumeOnTouch() {{
-                    a.play().catch(function(){{}});
+                    a.play().then(function() {{
+                        var vol = 0;
+                        var fi = setInterval(function() {{
+                            vol += 0.02;
+                            if (vol >= 0.3) {{ vol = 0.3; clearInterval(fi); }}
+                            a.volume = vol;
+                        }}, 50);
+                    }}).catch(function(){{}});
                     pd.removeEventListener('touchstart', resumeOnTouch);
                     pd.removeEventListener('click', resumeOnTouch);
                 }}
@@ -263,6 +272,7 @@ def sync_music():
     }})();
     </script>
     """, height=0)
+
 
 def _start_music(filename):
     fn_full = os.path.join(MUSIC_FOLDER, filename)
