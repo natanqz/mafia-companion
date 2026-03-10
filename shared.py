@@ -390,26 +390,81 @@ def _crossfade_music(new_filename):
 # ---- SOUND EFFECTS ----
 
 def preload_sounds():
-    """Кеширует base64 звуков в session_state."""
-    if st.session_state.get("_sounds_cached"):
+    """Создаёт audio элементы в parent document и функцию воспроизведения."""
+    if st.session_state.get("_sounds_preloaded_v2"):
         return
+
+    sounds_js = ""
     for fn in [METRONOME_SOUND, WHISTLE_SOUND]:
         fn_full = os.path.join(SOUNDS_FOLDER, fn)
         if os.path.exists(fn_full):
             with open(fn_full, 'rb') as f:
-                st.session_state[f"_snd_{fn}"] = base64.b64encode(f.read()).decode()
-    st.session_state._sounds_cached = True
+                b64 = base64.b64encode(f.read()).decode()
+            safe = fn.replace('.', '_')
+            sounds_js += f"""
+                pd.getElementById('snd_{safe}') && pd.getElementById('snd_{safe}').remove();
+                var a_{safe} = pd.createElement('audio');
+                a_{safe}.id = 'snd_{safe}';
+                a_{safe}.src = 'data:audio/mp3;base64,{b64}';
+                a_{safe}.preload = 'auto';
+                a_{safe}.volume = 1.0;
+                pd.body.appendChild(a_{safe});
+            """
+
+    if not sounds_js:
+        return
+
+    components.html(f"""
+    <script>
+    (function() {{
+        var pd = window.parent.document;
+        var pw = window.parent.window;
+        {sounds_js}
+
+        pw._mafiaPlaySound = function(name) {{
+            var el = pd.getElementById('snd_' + name);
+            if (el) {{
+                el.currentTime = 0;
+                var p = el.play();
+                if (p && p.catch) p.catch(function(){{}});
+            }}
+        }};
+
+        function unlock() {{
+            var ids = ['{METRONOME_SOUND.replace(".", "_")}', '{WHISTLE_SOUND.replace(".", "_")}'];
+            ids.forEach(function(name) {{
+                var el = pd.getElementById('snd_' + name);
+                if (el) {{
+                    el.play().then(function() {{ el.pause(); el.currentTime = 0; }}).catch(function(){{}});
+                }}
+            }});
+            pd.removeEventListener('touchstart', unlock);
+            pd.removeEventListener('click', unlock);
+        }}
+        pd.addEventListener('touchstart', unlock);
+        pd.addEventListener('click', unlock);
+    }})();
+    </script>
+    """, height=0)
+
+    st.session_state._sounds_preloaded_v2 = True
 
 
 def play_sound_html(fn):
-    """Воспроизводит звук через встроенный base64 — работает везде."""
-    b64 = st.session_state.get(f"_snd_{fn}")
-    if not b64:
-        return
+    """Воспроизводит звук через parent._mafiaPlaySound."""
+    safe = fn.replace('.', '_')
     components.html(f"""
-    <audio autoplay>
-        <source src="data:audio/mp3;base64,{b64}" type="audio/mpeg">
-    </audio>
+    <script>
+    (function() {{
+        var pw = window.parent.window;
+        if (pw && pw._mafiaPlaySound) {{
+            pw._mafiaPlaySound('{safe}');
+        }} else {{
+            var el = window.parent.document.getElementById('snd_{safe}');
+            if (el) {{ el.currentTime = 0; el.play().catch(function(){{}}); }}
+        }}
+    }})();
+    </script>
     """, height=0)
 
 # ---- NAVIGATION ----
@@ -447,7 +502,6 @@ def init_state():
         "catastrophe_tied": [],
         "show_roles": False,
         "_current_music": None,
-        "_sounds_cached": False,
     }
     for k, v in defaults.items():
         if k not in st.session_state:
