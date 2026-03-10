@@ -418,54 +418,56 @@ def preload_sounds():
 
 
 def play_timer_sound(duration=60):
-    """Запускает звуковой файл таймера — создаёт audio в parent document."""
+    """Ставит флаг — звук запустится после rerun."""
     if not st.session_state.get("timer_sound_enabled", True):
         return
-    fn = TIMER_60_SOUND if duration == 60 else TIMER_30_SOUND
-    b64 = st.session_state.get(f"_snd_b64_{fn}")
-    if not b64:
-        return
-    safe = fn.replace('.', '_')
-    components.html(f"""
-    <script>
-    (function() {{
-        var pd = window.parent.document;
-        // Останавливаем предыдущий
-        var old = pd.getElementById('timer_audio');
-        if (old) {{ old.pause(); old.remove(); }}
-        // Создаём новый
-        var a = pd.createElement('audio');
-        a.id = 'timer_audio';
-        a.src = 'data:audio/mp3;base64,{b64}';
-        a.volume = 1.0;
-        pd.body.appendChild(a);
-        a.play().catch(function(){{}});
-    }})();
-    </script>
-    """, height=0)
+    st.session_state._play_timer_pending = duration
+
 
 
 def stop_timer_sound():
-    """Останавливает звук таймера."""
-    components.html("""
-    <script>
-    (function() {
-        var pd = window.parent.document;
-        var a = pd.getElementById('timer_audio');
-        if (a) { a.pause(); a.currentTime = 0; }
-    })();
-    </script>
-    """, height=0)
+    """Ставит флаг на остановку."""
+    st.session_state._play_timer_pending = "stop"
+
+
 
 
 def reset_timer_sound(duration=60):
-    """Сбрасывает звук таймера — останавливает и запускает заново."""
+    """Ставит флаг на сброс."""
     if not st.session_state.get("timer_sound_enabled", True):
         return
-    fn = TIMER_60_SOUND if duration == 60 else TIMER_30_SOUND
+    st.session_state._play_timer_pending = f"reset_{duration}"
+
+
+def _execute_pending_sound():
+    """Выполняет отложенный звук — вызывать в mafia_companion.py после экрана."""
+    pending = st.session_state.get("_play_timer_pending")
+    if not pending:
+        return
+    st.session_state._play_timer_pending = None
+
+    if pending == "stop":
+        components.html("""
+        <script>
+        (function() {
+            var pd = window.parent.document;
+            var a = pd.getElementById('timer_audio');
+            if (a) { a.pause(); a.currentTime = 0; }
+        })();
+        </script>
+        """, height=0)
+        return
+
+    if isinstance(pending, str) and pending.startswith("reset_"):
+        dur = int(pending.split("_")[1])
+    else:
+        dur = pending
+
+    fn = TIMER_60_SOUND if dur == 60 else TIMER_30_SOUND
     b64 = st.session_state.get(f"_snd_b64_{fn}")
     if not b64:
         return
+
     components.html(f"""
     <script>
     (function() {{
@@ -481,7 +483,6 @@ def reset_timer_sound(duration=60):
     }})();
     </script>
     """, height=0)
-
 
 def play_sound_html(fn):
     """Оставляем для обратной совместимости — не используется для таймеров."""
@@ -631,6 +632,7 @@ def init_state():
         "music_enabled": True,
         "timer_sound_enabled": True,
         "_timer_sounds_cached": False,
+        "_play_timer_pending": None,
     }
     for k, v in defaults.items():
         if k not in st.session_state:

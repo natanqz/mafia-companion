@@ -1,5 +1,8 @@
 import streamlit as st
-from shared import init_state, inject_styles, inject_gold_buttons, preload_sounds, inject_audio_controls
+from shared import (
+    init_state, inject_styles, inject_gold_buttons,
+    preload_sounds, inject_audio_controls, _execute_pending_sound
+)
 from screens_setup import (
     screen_main_menu,
     screen_select_mode,
@@ -54,4 +57,5 @@ if current in SCREENS:
 else:
     screen_main_menu()
 
+_execute_pending_sound()
 inject_gold_buttons()
