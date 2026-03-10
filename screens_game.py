@@ -457,6 +457,7 @@ def _build_bars_html(sorted_all, order_nums, speaker_idx, phase, remaining, fmt_
 
     return html
 
+
 def _build_nom_grid(sorted_all, day, fmt_grid):
     nominated_nums = list(st.session_state.get("nominees", {}).values())
     html = ""
@@ -576,7 +577,7 @@ def _run_day_live():
         """, height=0)
 
         if sec == 0:
-            time.sleep(1.5)
+            time.sleep(2)
             break
 
         time.sleep(1)
