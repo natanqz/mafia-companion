@@ -546,19 +546,9 @@ def _run_day_live():
         else:
             color = "#ff2222"
 
-        # Определяем какой звук играть
-        sound_js = ""
-        if sec <= 10 and sec > 0:
-            safe = METRONOME_SOUND.replace('.', '_')
-            sound_js = f"if (pw._mafiaPlaySound) pw._mafiaPlaySound('{safe}');"
-        elif sec == 0:
-            safe = WHISTLE_SOUND.replace('.', '_')
-            sound_js = f"if (pw._mafiaPlaySound) pw._mafiaPlaySound('{safe}');"
-
         components.html(f"""
         <script>
         (function() {{
-            var pw = window.parent.window;
             var pd = window.parent.document;
             var frames = pd.querySelectorAll('iframe');
             for (var f of frames) {{
@@ -576,17 +566,18 @@ def _run_day_live():
                     if (num) break;
                 }} catch(e) {{}}
             }}
-            {sound_js}
         }})();
         </script>
         """, height=0)
 
+        if sec <= 10 and sec > 0:
+            play_sound_html(METRONOME_SOUND)
         if sec == 0:
+            play_sound_html(WHISTLE_SOUND)
             time.sleep(1.5)
             break
 
         time.sleep(1)
-
 
 def _get_remaining():
     if st.session_state.get("timer_paused"):

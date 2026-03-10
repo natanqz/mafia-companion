@@ -390,97 +390,27 @@ def _crossfade_music(new_filename):
 # ---- SOUND EFFECTS ----
 
 def preload_sounds():
-    """Загружает звуки в parent.document и создаёт глобальную функцию playSound."""
-    sounds_js = ""
+    """Кеширует base64 звуков в session_state."""
+    if st.session_state.get("_sounds_cached"):
+        return
     for fn in [METRONOME_SOUND, WHISTLE_SOUND]:
         fn_full = os.path.join(SOUNDS_FOLDER, fn)
         if os.path.exists(fn_full):
             with open(fn_full, 'rb') as f:
-                b64 = base64.b64encode(f.read()).decode()
-            safe_name = fn.replace('.', '_')
-            sounds_js += f"""
-                window._mafia_sounds['{safe_name}'] = 'data:audio/mp3;base64,{b64}';
-            """
-
-    if not sounds_js:
-        return
-
-    components.html(f"""
-    <script>
-    (function() {{
-        var pd = window.parent.document;
-        var pw = window.parent.window;
-
-        // Хранилище звуков
-        if (!pw._mafia_sounds) pw._mafia_sounds = {{}};
-        if (!pw._mafia_audio_pool) pw._mafia_audio_pool = {{}};
-
-        {sounds_js}
-
-        // Глобальная функция воспроизведения через parent
-        pw._mafiaPlaySound = function(name) {{
-            var src = pw._mafia_sounds[name];
-            if (!src) return;
-
-            // Используем пул audio элементов
-            if (!pw._mafia_audio_pool[name]) {{
-                var a = pd.createElement('audio');
-                a.src = src;
-                a.preload = 'auto';
-                a.volume = 1.0;
-                pd.body.appendChild(a);
-                pw._mafia_audio_pool[name] = a;
-            }}
-
-            var audio = pw._mafia_audio_pool[name];
-            audio.currentTime = 0;
-            var p = audio.play();
-            if (p && p.catch) p.catch(function(){{}});
-        }};
-
-        // Разблокируем audio при первом касании
-        function unlockAudio() {{
-            Object.keys(pw._mafia_audio_pool).forEach(function(k) {{
-                var a = pw._mafia_audio_pool[k];
-                a.play().then(function() {{ a.pause(); a.currentTime = 0; }}).catch(function(){{}});
-            }});
-            // Создаём все audio заранее при первом тапе
-            Object.keys(pw._mafia_sounds).forEach(function(name) {{
-                if (!pw._mafia_audio_pool[name]) {{
-                    var a = pd.createElement('audio');
-                    a.src = pw._mafia_sounds[name];
-                    a.preload = 'auto';
-                    a.volume = 1.0;
-                    pd.body.appendChild(a);
-                    pw._mafia_audio_pool[name] = a;
-                    a.play().then(function() {{ a.pause(); a.currentTime = 0; }}).catch(function(){{}});
-                }}
-            }});
-            pd.removeEventListener('touchstart', unlockAudio);
-            pd.removeEventListener('click', unlockAudio);
-        }}
-        pd.addEventListener('touchstart', unlockAudio);
-        pd.addEventListener('click', unlockAudio);
-    }})();
-    </script>
-    """, height=0)
+                st.session_state[f"_snd_{fn}"] = base64.b64encode(f.read()).decode()
+    st.session_state._sounds_cached = True
 
 
 def play_sound_html(fn):
-    """Вызывает parent._mafiaPlaySound — работает даже когда iframe вне экрана."""
-    safe_name = fn.replace('.', '_')
+    """Воспроизводит звук через встроенный base64 — работает везде."""
+    b64 = st.session_state.get(f"_snd_{fn}")
+    if not b64:
+        return
     components.html(f"""
-    <script>
-    (function() {{
-        var pw = window.parent.window;
-        if (pw._mafiaPlaySound) {{
-            pw._mafiaPlaySound('{safe_name}');
-        }}
-    }})();
-    </script>
+    <audio autoplay>
+        <source src="data:audio/mp3;base64,{b64}" type="audio/mpeg">
+    </audio>
     """, height=0)
-
-
 
 # ---- NAVIGATION ----
 def go(screen):
@@ -517,6 +447,7 @@ def init_state():
         "catastrophe_tied": [],
         "show_roles": False,
         "_current_music": None,
+        "_sounds_cached": False,
     }
     for k, v in defaults.items():
         if k not in st.session_state:
