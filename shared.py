@@ -411,9 +411,15 @@ def preload_sounds():
         return
     for fn in [TIMER_60_SOUND, TIMER_30_SOUND]:
         fn_full = os.path.join(SOUNDS_FOLDER, fn)
-        if os.path.exists(fn_full):
+        exists = os.path.exists(fn_full)
+        if exists:
+            size = os.path.getsize(fn_full)
             with open(fn_full, 'rb') as f:
-                st.session_state[f"_snd_b64_{fn}"] = base64.b64encode(f.read()).decode()
+                b64 = base64.b64encode(f.read()).decode()
+            st.session_state[f"_snd_b64_{fn}"] = b64
+            st.toast(f"✅ {fn}: {size} bytes, b64={len(b64)}")
+        else:
+            st.toast(f"❌ {fn} NOT FOUND at {fn_full}")
     st.session_state._timer_sounds_cached = True
 
 
@@ -440,7 +446,7 @@ def reset_timer_sound(duration=60):
 
 
 def _execute_pending_sound():
-    """Выполняет отложенный звук — вызывать в mafia_companion.py после экрана."""
+    """Выполняет отложенный звук."""
     pending = st.session_state.get("_play_timer_pending")
     if not pending:
         return
@@ -461,12 +467,16 @@ def _execute_pending_sound():
     if isinstance(pending, str) and pending.startswith("reset_"):
         dur = int(pending.split("_")[1])
     else:
-        dur = pending
+        dur = int(pending)
 
     fn = TIMER_60_SOUND if dur == 60 else TIMER_30_SOUND
     b64 = st.session_state.get(f"_snd_b64_{fn}")
+
     if not b64:
+        st.toast(f"❌ No b64 for {fn}")
         return
+
+    st.toast(f"🔊 Playing {fn}, b64 len={len(b64)}")
 
     components.html(f"""
     <script>
@@ -479,10 +489,18 @@ def _execute_pending_sound():
         a.src = 'data:audio/mp3;base64,{b64}';
         a.volume = 1.0;
         pd.body.appendChild(a);
-        a.play().catch(function(){{}});
+        var p = a.play();
+        if (p && p.then) {{
+            p.then(function() {{
+                console.log('TIMER AUDIO PLAYING');
+            }}).catch(function(e) {{
+                console.log('TIMER AUDIO BLOCKED:', e);
+            }});
+        }}
     }})();
     </script>
     """, height=0)
+
 
 def play_sound_html(fn):
     """Оставляем для обратной совместимости — не используется для таймеров."""
