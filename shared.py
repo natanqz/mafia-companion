@@ -184,23 +184,85 @@ SCREEN_MUSIC = {
 
 
 def sync_music():
-    """Вызывать в начале каждого экрана. Сама решает что играть."""
-    screen = st.session_state.get("screen", "main_menu")
-    target_track = SCREEN_MUSIC.get(screen, None)
-    current_track = st.session_state.get("_current_music", None)
+    """Управление фоновой музыкой — останавливает старые треки перед запуском нового."""
+    scr = st.session_state.get("screen", "")
+    if scr in ("game_night", "night_zero"):
+        track = NIGHT_MUSIC
+    elif scr in ("game_day", "game_vote", "game_vote_catastrophe", "game_last_word"):
+        track = DAY_MUSIC
+    else:
+        track = None
 
-    if target_track == current_track:
+    prev = st.session_state.get("_current_music")
+
+    # Если трек не изменился — не трогаем
+    if track == prev:
         return
 
-    st.session_state._current_music = target_track
+    st.session_state._current_music = track
 
-    if target_track is None:
-        _fade_out_music()
-    elif current_track is None:
-        _start_music(target_track)
-    else:
-        _crossfade_music(target_track)
+    if track is None:
+        # Остановить всю музыку
+        components.html("""
+        <script>
+        (function() {
+            var pd = window.parent.document;
+            var audios = pd.querySelectorAll('audio.bg-music');
+            audios.forEach(function(a) { a.pause(); a.remove(); });
+        })();
+        </script>
+        """, height=0)
+        return
 
+    fn = os.path.join(SOUNDS_FOLDER, track)
+    if not os.path.exists(fn):
+        return
+
+    with open(fn, 'rb') as f:
+        b64 = base64.b64encode(f.read()).decode()
+
+    safe_name = track.replace('.', '_')
+
+    components.html(f"""
+    <script>
+    (function() {{
+        var pd = window.parent.document;
+
+        // Останавливаем и удаляем ВСЕ предыдущие bg-music
+        var old = pd.querySelectorAll('audio.bg-music');
+        old.forEach(function(a) {{
+            a.pause();
+            a.currentTime = 0;
+            a.remove();
+        }});
+
+        // Создаём новый
+        var a = pd.createElement('audio');
+        a.className = 'bg-music';
+        a.id = 'bgm_{safe_name}';
+        a.src = 'data:audio/mp3;base64,{b64}';
+        a.loop = true;
+        a.volume = 0.3;
+        a.preload = 'auto';
+        pd.body.appendChild(a);
+
+        // Пробуем играть (может потребовать жест на мобильных)
+        var playPromise = a.play();
+        if (playPromise !== undefined) {{
+            playPromise.catch(function() {{
+                // Autoplay заблокирован — ждём первый тач
+                function resumeOnTouch() {{
+                    a.play().catch(function(){{}});
+                    pd.removeEventListener('touchstart', resumeOnTouch);
+                    pd.removeEventListener('click', resumeOnTouch);
+                }}
+                pd.addEventListener('touchstart', resumeOnTouch);
+                pd.addEventListener('click', resumeOnTouch);
+            }});
+        }}
+    }})();
+    </script>
+    """, height=0)
 
 def _start_music(filename):
     fn_full = os.path.join(MUSIC_FOLDER, filename)
@@ -318,7 +380,7 @@ def _crossfade_music(new_filename):
 # ---- SOUND EFFECTS ----
 
 def preload_sounds():
-    """Вызвать один раз при старте. Загружает звуки в parent.document."""
+    """Загружает звуковые эффекты в parent.document — один раз."""
     sounds = {}
     for fn in [METRONOME_SOUND, WHISTLE_SOUND]:
         fn_full = os.path.join(SOUNDS_FOLDER, fn)
@@ -333,14 +395,14 @@ def preload_sounds():
     for fn, b64 in sounds.items():
         safe_name = fn.replace('.', '_')
         js_sounds += f"""
-            if (!pd.getElementById('snd_{safe_name}')) {{
-                var a = pd.createElement('audio');
-                a.id = 'snd_{safe_name}';
-                a.src = 'data:audio/mp3;base64,{b64}';
-                a.preload = 'auto';
-                a.volume = 1.0;
-                pd.body.appendChild(a);
-            }}
+            var existing_{safe_name} = pd.getElementById('snd_{safe_name}');
+            if (existing_{safe_name}) {{ existing_{safe_name}.remove(); }}
+            var a_{safe_name} = pd.createElement('audio');
+            a_{safe_name}.id = 'snd_{safe_name}';
+            a_{safe_name}.src = 'data:audio/mp3;base64,{b64}';
+            a_{safe_name}.preload = 'auto';
+            a_{safe_name}.volume = 1.0;
+            pd.body.appendChild(a_{safe_name});
         """
 
     components.html(f"""
@@ -351,7 +413,6 @@ def preload_sounds():
     }})();
     </script>
     """, height=0)
-
 
 def play_sound_html(fn):
     """Воспроизводит предзагруженный звук — мгновенно, без создания нового audio."""
