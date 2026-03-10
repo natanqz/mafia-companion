@@ -6,8 +6,8 @@ import time
 from datetime import datetime
 from shared import (
     load_db, save_db, get_player, go, get_alive,
-    sync_music, run_timer_no_block, role_emoji,
-    play_sound_html, METRONOME_SOUND, WHISTLE_SOUND,
+    sync_music, role_emoji,
+    play_timer_sound, stop_timer_sound,
     p_num, p_name, p_bar_text
 )
 
@@ -267,6 +267,7 @@ def screen_game_morning():
                     st.session_state.morning_timer_start = time.time()
                     st.session_state.morning_timer_duration = 30
                     st.session_state.morning_phase = "speaking"
+                    play_timer_sound(30)
                     st.rerun()
             with c2:
                 if st.button(f"☀️ День {day + 1}", key="mt_skip", use_container_width=True):
@@ -313,22 +314,11 @@ def _run_morning_timer(timer_ph):
     total = st.session_state.morning_timer_duration
     if start is None: return
 
-    import streamlit.components.v1 as components
-    from shared import METRONOME_SOUND, WHISTLE_SOUND
-
     while True:
         elapsed = time.time() - start
         sec = max(0, total - int(elapsed))
         progress = min(100, int(((total - sec) / max(total, 1)) * 100))
         color = "white" if sec > 10 else "red"
-
-        sound_js = ""
-        if sec <= 10 and sec > 0:
-            safe = METRONOME_SOUND.replace('.', '_')
-            sound_js = f"if (pw._mafiaPlaySound) pw._mafiaPlaySound('{safe}');"
-        elif sec == 0:
-            safe = WHISTLE_SOUND.replace('.', '_')
-            sound_js = f"if (pw._mafiaPlaySound) pw._mafiaPlaySound('{safe}');"
 
         timer_ph.markdown(f'''
         <div style="text-align:center;">
@@ -337,16 +327,6 @@ def _run_morning_timer(timer_ph):
                 <div style="background:#4CAF50;width:{progress}%;height:100%;border-radius:6px;"></div>
             </div>
         </div>''', unsafe_allow_html=True)
-
-        if sound_js:
-            components.html(f"""
-            <script>
-            (function() {{
-                var pw = window.parent.window;
-                {sound_js}
-            }})();
-            </script>
-            """, height=0)
 
         time.sleep(2)
         break

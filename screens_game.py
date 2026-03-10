@@ -3,8 +3,9 @@ import math
 import time
 from shared import (
     go, get_alive, get_speaker_order,
-    play_sound_html, METRONOME_SOUND, WHISTLE_SOUND, sync_music,
-    role_emoji, p_num, p_name, p_bar_text
+    play_sound_html, play_timer_sound, stop_timer_sound, reset_timer_sound,
+    METRONOME_SOUND, WHISTLE_SOUND, TIMER_60_SOUND, TIMER_30_SOUND,
+    sync_music, role_emoji, p_num, p_name, p_bar_text
 )
 import streamlit.components.v1 as components
 
@@ -300,9 +301,11 @@ def screen_game_day():
         st.session_state.timer_start_time = time.time()
         st.session_state.timer_duration = 60
         st.session_state.timer_paused = False
+        play_timer_sound(62)
         st.rerun()
 
     if st.button("day_Спасибо", key="day_thanks"):
+        stop_timer_sound()
         st.session_state.timer_start_time = None
         st.session_state.timer_paused = False
         st.session_state.day_phase = "idle"
@@ -316,6 +319,7 @@ def screen_game_day():
             st.session_state.timer_start_time = time.time()
             st.session_state.timer_duration = 60
             st.session_state.timer_paused = False
+            reset_timer_sound(62)
         st.rerun()
 
     if st.button("day_ТПауза", key="day_tpause"):
@@ -324,10 +328,12 @@ def screen_game_day():
                 st.session_state.timer_paused = False
                 st.session_state.timer_start_time = time.time()
                 st.session_state.timer_duration = st.session_state.timer_paused_remaining
+                # Не перезапускаем звук — пауза не поддерживается в этом подходе
             else:
                 st.session_state.timer_paused = True
                 st.session_state.timer_paused_remaining = _get_remaining()
                 st.session_state.timer_start_time = None
+                stop_timer_sound()
         st.rerun()
 
     sorted_all = sorted(players, key=lambda p: p['number'])
@@ -519,7 +525,6 @@ def _calc_day_height(players, all_done, nominees):
     return h
 
 
-
 def _reset_day():
     st.session_state.day_phase = "idle"
     st.session_state.timer_start_time = None
@@ -570,14 +575,12 @@ def _run_day_live():
         </script>
         """, height=0)
 
-        if sec <= 10 and sec > 0:
-            play_sound_html(METRONOME_SOUND)
         if sec == 0:
-            play_sound_html(WHISTLE_SOUND)
             time.sleep(1.5)
             break
 
         time.sleep(1)
+
 
 def _get_remaining():
     if st.session_state.get("timer_paused"):
@@ -1019,6 +1022,8 @@ def _get_lw_remaining():
     elapsed = time.time() - st.session_state.lw_timer_start
     return max(0, st.session_state.lw_timer_duration - int(elapsed))
 
+
+
 def _run_lw_timer(timer_ph):
     start = st.session_state.lw_timer_start
     total = st.session_state.lw_timer_duration
@@ -1028,15 +1033,6 @@ def _run_lw_timer(timer_ph):
         sec = max(0, total - int(elapsed))
         progress = min(100, int(((total - sec) / max(total, 1)) * 100))
         color = "white" if sec > 10 else "red"
-
-        sound_js = ""
-        if sec <= 10 and sec > 0:
-            safe = METRONOME_SOUND.replace('.', '_')
-            sound_js = f"if (pw._mafiaPlaySound) pw._mafiaPlaySound('{safe}');"
-        elif sec == 0:
-            safe = WHISTLE_SOUND.replace('.', '_')
-            sound_js = f"if (pw._mafiaPlaySound) pw._mafiaPlaySound('{safe}');"
-
         timer_ph.markdown(f'''
             <div style="text-align:center;">
                 <p style="font-size:72px;font-weight:bold;margin:0;color:{color};line-height:1;">{sec}</p>
@@ -1044,20 +1040,8 @@ def _run_lw_timer(timer_ph):
                     <div style="background:#4CAF50;width:{progress}%;height:100%;border-radius:6px;"></div>
                 </div>
             </div>''', unsafe_allow_html=True)
-
-        if sound_js:
-            components.html(f"""
-            <script>
-            (function() {{
-                var pw = window.parent.window;
-                {sound_js}
-            }})();
-            </script>
-            """, height=0)
-
         time.sleep(2)
         break
-
 
 
 def _finish_last_word(day):
@@ -1148,14 +1132,16 @@ def screen_game_last_word():
             if st.button(f"▶️ Старт {p_num(current_p)} {p_name(current_p)}", use_container_width=True, key="lw_start"):
                 st.session_state.lw_phase = "speaking"
                 st.session_state.lw_timer_start = time.time()
-                st.session_state.lw_timer_duration = 30;
+                st.session_state.lw_timer_duration = 30
+                play_timer_sound(30)
                 st.rerun()
         elif phase == "speaking":
             if st.button("🙏 Спасибо", use_container_width=True, key="lw_thanks"):
+                stop_timer_sound()
                 st.session_state.lw_done_list.append(current_num)
                 st.session_state.lw_current_idx += 1
                 st.session_state.lw_phase = "idle"
-                st.session_state.lw_timer_start = None;
+                st.session_state.lw_timer_start = None
                 st.rerun()
 
         if phase == "speaking" and st.session_state.lw_timer_start is not None:
