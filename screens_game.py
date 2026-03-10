@@ -301,7 +301,7 @@ def screen_game_day():
         st.session_state.timer_start_time = time.time()
         st.session_state.timer_duration = 60
         st.session_state.timer_paused = False
-        play_timer_sound(62)
+        play_timer_sound(60)
         st.rerun()
 
     if st.button("day_Спасибо", key="day_thanks"):
@@ -319,7 +319,7 @@ def screen_game_day():
             st.session_state.timer_start_time = time.time()
             st.session_state.timer_duration = 60
             st.session_state.timer_paused = False
-            reset_timer_sound(62)
+            reset_timer_sound(60)
         st.rerun()
 
     if st.button("day_ТПауза", key="day_tpause"):
@@ -885,9 +885,12 @@ def screen_game_vote_catastrophe():
             st.session_state.cat_phase = "speaking"
             st.session_state.cat_timer_start = time.time()
             st.session_state.cat_timer_duration = 30
-            st.session_state.cat_timer_paused = False; st.rerun()
+            st.session_state.cat_timer_paused = False
+            play_timer_sound(30)
+            st.rerun()
     else:
         if st.button("🙏 Спасибо", use_container_width=True, key="cat_main"):
+            stop_timer_sound()
             st.session_state.cat_timer_start = None
             st.session_state.cat_timer_paused = False
             st.session_state.cat_phase = "idle"
@@ -985,25 +988,6 @@ def _run_cat_timer_loop(timer_display, live_zone, players, tied, prev_voters, sp
         _draw_cat_timer(timer_display, sec)
         html = _build_cat_bars_html(players, tied, prev_voters, speaker_idx)
         live_zone.markdown(html, unsafe_allow_html=True)
-
-        sound_js = ""
-        if sec <= 10 and sec > 0:
-            safe = METRONOME_SOUND.replace('.', '_')
-            sound_js = f"if (pw._mafiaPlaySound) pw._mafiaPlaySound('{safe}');"
-        elif sec == 0:
-            safe = WHISTLE_SOUND.replace('.', '_')
-            sound_js = f"if (pw._mafiaPlaySound) pw._mafiaPlaySound('{safe}');"
-
-        if sound_js:
-            components.html(f"""
-            <script>
-            (function() {{
-                var pw = window.parent.window;
-                {sound_js}
-            }})();
-            </script>
-            """, height=0)
-
         time.sleep(2)
         break
 

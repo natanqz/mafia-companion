@@ -10,7 +10,8 @@ from collections import Counter
 from shared import (
     load_db, save_db, get_player, get_play_count, go,
     sync_music, calculate_roles, role_emoji,
-    play_sound_html, METRONOME_SOUND, WHISTLE_SOUND
+    play_sound_html, play_timer_sound, stop_timer_sound, reset_timer_sound,
+    METRONOME_SOUND, WHISTLE_SOUND
 )
 import streamlit.components.v1 as components
 
@@ -1152,6 +1153,7 @@ def screen_night_zero():
         st.session_state.n0_phase = "running"
         st.session_state.n0_timer_start = time.time()
         st.session_state.n0_seconds = 60
+        play_timer_sound(60)
         st.rerun()
 
     if st.button("n0_Пауза", key="n0_pause_btn"):
@@ -1175,6 +1177,7 @@ def screen_night_zero():
         st.session_state.n0_phase = "running"
         st.session_state.n0_timer_start = time.time()
         st.session_state.n0_seconds = 60
+        reset_timer_sound(60)
         st.rerun()
 
     if st.button("n0_Утро", key="n0_morning_btn"):
@@ -1216,6 +1219,7 @@ def screen_night_zero():
 
 
 def _run_n0_live():
+    from shared import play_timer_sound, stop_timer_sound
     start = st.session_state.n0_timer_start
     total = st.session_state.n0_seconds
     if not start:
@@ -1236,18 +1240,9 @@ def _run_n0_live():
         else:
             color = "#ff2222"
 
-        sound_js = ""
-        if sec <= 10 and sec > 0:
-            safe = METRONOME_SOUND.replace('.', '_')
-            sound_js = f"if (pw._mafiaPlaySound) pw._mafiaPlaySound('{safe}');"
-        elif sec == 0:
-            safe = WHISTLE_SOUND.replace('.', '_')
-            sound_js = f"if (pw._mafiaPlaySound) pw._mafiaPlaySound('{safe}');"
-
         components.html(f"""
         <script>
         (function() {{
-            var pw = window.parent.window;
             var pd = window.parent.document;
             var frames = pd.querySelectorAll('iframe');
             for (var f of frames) {{
@@ -1271,7 +1266,6 @@ def _run_n0_live():
                     }}
                 }} catch(e) {{}}
             }}
-            {sound_js}
         }})();
         </script>
         """, height=0)
@@ -1279,12 +1273,11 @@ def _run_n0_live():
         if sec == 0:
             st.session_state.n0_phase = "done"
             st.session_state.n0_timer_start = None
-            time.sleep(1.5)
+            time.sleep(2)
             st.rerun()
             break
 
         time.sleep(1)
-
 
 def _get_n0_remaining():
     if st.session_state.get("n0_timer_paused"):
